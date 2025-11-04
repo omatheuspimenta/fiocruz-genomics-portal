@@ -1,0 +1,111 @@
+2025-11-04 16:45:57.651 Hail: WARN: This Hail JAR was compiled for Spark 3.5.0, running with Spark 3.5.7.
+  Compatibility is not guaranteed.
+2025-11-04 16:45:57.657 SparkContext: INFO: Running Spark version 3.5.7
+2025-11-04 16:45:57.657 SparkContext: INFO: OS info Linux, 6.16.3-76061603-generic, amd64
+2025-11-04 16:45:57.657 SparkContext: INFO: Java version 17.0.16
+2025-11-04 16:45:57.679 ResourceUtils: INFO: ==============================================================
+2025-11-04 16:45:57.679 ResourceUtils: INFO: No custom resources configured for spark.driver.
+2025-11-04 16:45:57.679 ResourceUtils: INFO: ==============================================================
+2025-11-04 16:45:57.680 SparkContext: INFO: Submitted application: Hail
+2025-11-04 16:45:57.682 SparkContext: INFO: Spark configuration:
+spark.app.name=Hail
+spark.app.startTime=1762285557656
+spark.app.submitTime=1762285557525
+spark.driver.extraClassPath=/home/matheus/.pyenv/versions/3.12.0/lib/python3.12/site-packages/hail/backend/hail-all-spark.jar
+spark.driver.extraJavaOptions=-Djava.net.preferIPv6Addresses=false -XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED -Djdk.reflect.useDirectMethodHandle=false
+spark.driver.maxResultSize=0
+spark.executor.extraClassPath=./hail-all-spark.jar
+spark.executor.extraJavaOptions=-Djava.net.preferIPv6Addresses=false -XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED -Djdk.reflect.useDirectMethodHandle=false
+spark.hadoop.io.compression.codecs=org.apache.hadoop.io.compress.DefaultCodec,is.hail.io.compress.BGzipCodec,is.hail.io.compress.BGzipCodecTbi,org.apache.hadoop.io.compress.GzipCodec
+spark.hadoop.mapreduce.input.fileinputformat.split.minsize=0
+spark.jars=file:///home/matheus/.pyenv/versions/3.12.0/lib/python3.12/site-packages/hail/backend/hail-all-spark.jar
+spark.kryo.registrator=is.hail.kryo.HailKryoRegistrator
+spark.kryoserializer.buffer.max=1g
+spark.logConf=true
+spark.master=local[*]
+spark.repl.local.jars=file:///home/matheus/.pyenv/versions/3.12.0/lib/python3.12/site-packages/hail/backend/hail-all-spark.jar
+spark.serializer=org.apache.spark.serializer.KryoSerializer
+spark.submit.deployMode=client
+spark.submit.pyFiles=
+spark.ui.showConsoleProgress=false
+2025-11-04 16:45:57.693 ResourceProfile: INFO: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+2025-11-04 16:45:57.698 ResourceProfile: INFO: Limiting resource is cpu
+2025-11-04 16:45:57.698 ResourceProfileManager: INFO: Added ResourceProfile id: 0
+2025-11-04 16:45:57.726 SecurityManager: INFO: Changing view acls to: matheus
+2025-11-04 16:45:57.726 SecurityManager: INFO: Changing modify acls to: matheus
+2025-11-04 16:45:57.726 SecurityManager: INFO: Changing view acls groups to: 
+2025-11-04 16:45:57.726 SecurityManager: INFO: Changing modify acls groups to: 
+2025-11-04 16:45:57.726 SecurityManager: INFO: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: matheus; groups with view permissions: EMPTY; users with modify permissions: matheus; groups with modify permissions: EMPTY
+2025-11-04 16:45:57.844 Utils: INFO: Successfully started service 'sparkDriver' on port 43201.
+2025-11-04 16:45:57.859 SparkEnv: INFO: Registering MapOutputTracker
+2025-11-04 16:45:57.876 SparkEnv: INFO: Registering BlockManagerMaster
+2025-11-04 16:45:57.885 BlockManagerMasterEndpoint: INFO: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+2025-11-04 16:45:57.886 BlockManagerMasterEndpoint: INFO: BlockManagerMasterEndpoint up
+2025-11-04 16:45:57.888 SparkEnv: INFO: Registering BlockManagerMasterHeartbeat
+2025-11-04 16:45:57.898 DiskBlockManager: INFO: Created local directory at /tmp/blockmgr-3816b80f-9855-49ee-8569-17e896e4cdaf
+2025-11-04 16:45:57.905 MemoryStore: INFO: MemoryStore started with capacity 434.4 MiB
+2025-11-04 16:45:57.912 SparkEnv: INFO: Registering OutputCommitCoordinator
+2025-11-04 16:45:57.936 log: INFO: Logging initialized @1421ms to org.sparkproject.jetty.util.log.Slf4jLog
+2025-11-04 16:45:57.976 JettyUtils: INFO: Start Jetty 0.0.0.0:4040 for SparkUI
+2025-11-04 16:45:57.981 Server: INFO: jetty-9.4.58.v20250814; built: 2025-08-14T02:28:49.637Z; git: 8f1440587e9e4ae7db3d74cf205643f3d707148d; jvm 17.0.16+8-Ubuntu-0ubuntu122.04.1
+2025-11-04 16:45:57.989 Server: INFO: Started @1475ms
+2025-11-04 16:45:58.000 Utils: WARN: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+2025-11-04 16:45:58.004 AbstractConnector: INFO: Started ServerConnector@28994fe6{HTTP/1.1, (http/1.1)}{0.0.0.0:4041}
+2025-11-04 16:45:58.004 Utils: INFO: Successfully started service 'SparkUI' on port 4041.
+2025-11-04 16:45:58.014 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@6a1d2b1a{/,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.022 SparkContext: INFO: Added JAR file:///home/matheus/.pyenv/versions/3.12.0/lib/python3.12/site-packages/hail/backend/hail-all-spark.jar at spark://pimenta:43201/jars/hail-all-spark.jar with timestamp 1762285557656
+2025-11-04 16:45:58.052 Executor: INFO: Starting executor ID driver on host pimenta
+2025-11-04 16:45:58.052 Executor: INFO: OS info Linux, 6.16.3-76061603-generic, amd64
+2025-11-04 16:45:58.052 Executor: INFO: Java version 17.0.16
+2025-11-04 16:45:58.055 Executor: INFO: Starting executor with user classpath (userClassPathFirst = false): 'file:/home/matheus/Documents/gnomeAD-tb/./hail-all-spark.jar,file:/home/matheus/Documents/gnomeAD-tb/hail-all-spark.jar'
+2025-11-04 16:45:58.056 Executor: INFO: Created or updated repl class loader org.apache.spark.util.MutableURLClassLoader@512fc75 for default.
+2025-11-04 16:45:58.066 Utils: INFO: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 42277.
+2025-11-04 16:45:58.066 NettyBlockTransferService: INFO: Server created on pimenta:42277
+2025-11-04 16:45:58.067 BlockManager: INFO: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+2025-11-04 16:45:58.070 BlockManagerMaster: INFO: Registering BlockManager BlockManagerId(driver, pimenta, 42277, None)
+2025-11-04 16:45:58.072 BlockManagerMasterEndpoint: INFO: Registering block manager pimenta:42277 with 434.4 MiB RAM, BlockManagerId(driver, pimenta, 42277, None)
+2025-11-04 16:45:58.073 BlockManagerMaster: INFO: Registered BlockManager BlockManagerId(driver, pimenta, 42277, None)
+2025-11-04 16:45:58.074 BlockManager: INFO: Initialized BlockManager: BlockManagerId(driver, pimenta, 42277, None)
+2025-11-04 16:45:58.140 ContextHandler: INFO: Stopped o.s.j.s.ServletContextHandler@6a1d2b1a{/,null,STOPPED,@Spark}
+2025-11-04 16:45:58.140 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5106b4da{/jobs,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.141 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@34b39511{/jobs/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.141 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@242e4225{/jobs/job,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.142 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@66e0d9e3{/jobs/job/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.142 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@565fb5c9{/stages,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.143 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@7c5cce89{/stages/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.143 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@435c41b{/stages/stage,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.144 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@b1d312d{/stages/stage/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.144 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@547c2de{/stages/pool,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.145 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@4570701b{/stages/pool/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.145 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@177af913{/storage,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.145 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@43942825{/storage/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.146 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@2b25f245{/storage/rdd,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.146 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5fa76664{/storage/rdd/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.147 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@973e0be{/environment,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.147 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@558c3e52{/environment/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.147 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@4ac1b914{/executors,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.148 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@28f3cfea{/executors/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.148 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@3def71a7{/executors/threadDump,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.149 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5fdcb1c6{/executors/threadDump/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.149 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@68df5cec{/executors/heapHistogram,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.150 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@e71c9eb{/executors/heapHistogram/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.153 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@69c3a4df{/static,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.154 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@79705c0b{/,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.154 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@11a6fa94{/api,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.155 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@184e4be0{/jobs/job/kill,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.155 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@56dcb6e4{/stages/stage/kill,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.158 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@426d1fa{/metrics/json,null,AVAILABLE,@Spark}
+2025-11-04 16:45:58.161 Hail: INFO: SparkUI: http://pimenta:4041
+2025-11-04 16:45:58.164 Hail: WARN: Hail is tested against Java 11, found 17.0.16
+2025-11-04 16:45:58.242 Hail: INFO: Running Hail version 0.2.136-c32f88309ab0
+2025-11-04 16:45:58.278 SparkContext: WARN: Using an existing SparkContext; some configuration may not take effect.
+2025-11-04 19:45:23.253 SparkContext: INFO: Invoking stop() from shutdown hook
+2025-11-04 19:45:23.254 SparkContext: INFO: SparkContext is stopping with exitCode 0.
+2025-11-04 19:45:23.264 AbstractConnector: INFO: Stopped Spark@28994fe6{HTTP/1.1, (http/1.1)}{0.0.0.0:4041}
+2025-11-04 19:45:23.267 SparkUI: INFO: Stopped Spark web UI at http://pimenta:4041
+2025-11-04 19:45:23.279 MapOutputTrackerMasterEndpoint: INFO: MapOutputTrackerMasterEndpoint stopped!
+2025-11-04 19:45:23.289 MemoryStore: INFO: MemoryStore cleared
+2025-11-04 19:45:23.289 BlockManager: INFO: BlockManager stopped
+2025-11-04 19:45:23.292 BlockManagerMaster: INFO: BlockManagerMaster stopped
+2025-11-04 19:45:23.295 OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: INFO: OutputCommitCoordinator stopped!
+2025-11-04 19:45:23.301 SparkContext: INFO: Successfully stopped SparkContext

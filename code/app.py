@@ -3,15 +3,10 @@ import hail as hl
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from gnomad_toolbox.filtering.vep import get_gene_intervals
 import re
 
 # Configure Streamlit page
-st.set_page_config(page_title="gnomAD Variant Browser", layout="wide")
-
-# helper function to extract info field
-def first_or_default(expr, default):
-    return hl.if_else(hl.len(expr) > 0, expr[0], default)
+st.set_page_config(page_title="Variant Browser", layout="wide")
 
 @st.cache_resource
 def init_hail():
@@ -20,109 +15,132 @@ def init_hail():
     return True
 
 @st.cache_data
-def load_gene_list():
-    """Load gene symbols for autocomplete"""
-    try:
-        # Get gene intervals from gnomad-toolbox
-        genes = get_gene_intervals(reference='GRCh38')
-        gene_df = genes.to_pandas()
-        return sorted(gene_df['gene_name'].unique().tolist())
-    except:
-        return []
+def get_available_fields(mt_path):
+    """Get list of available INFO fields from the matrix table"""
+    mt = hl.read_matrix_table(mt_path)
+    return list(mt.info.dtype.fields)
 
 @st.cache_data
 def load_variant_data(mt_path):
-    """Load and process matrix table"""
+    """Load and process matrix table dynamically based on available fields"""
     mt = hl.read_matrix_table(mt_path)
     variants = mt.rows()
     
-    # Select relevant fields from the info struct
-    variants = variants.select(
-        # Locus information
-        chrom=variants.locus.contig,
-        pos=variants.locus.position,
-        ref=variants.alleles[0],
-        alt=hl.delimit(variants.alleles[1:], ','),  # Join alt alleles if multiple
-        rsid=variants.rsid,
-
-        # Basic allele statistics (from gnomAD info field)
-        AC=first_or_default(variants.info.AC, 0),
-        AN=variants.info.AN,
-        AF=first_or_default(variants.info.AF, 0.0),
-
-        # Genetic ancestry group with max AF
-        grpmax=first_or_default(variants.info.grpmax, ''),
-
-        # Filtering Allele Frequency (95% confidence)
-        faf95_max=first_or_default(variants.info.fafmax_faf95_max, 0.0),
-        faf95_max_gen_anc=first_or_default(variants.info.fafmax_faf95_max_gen_anc, ''),
-
-        # Number of homozygotes
-        nhomalt=first_or_default(variants.info.nhomalt, 0),
-
-        # Sex-specific counts
-        AC_XX=first_or_default(variants.info.AC_XX, 0),
-        AN_XX=variants.info.AN_XX,
-        AF_XX=first_or_default(variants.info.AF_XX, 0.0),
-        nhomalt_XX=first_or_default(variants.info.nhomalt_XX, 0),
-
-        AC_XY=first_or_default(variants.info.AC_XY, 0),
-        AN_XY=variants.info.AN_XY,
-        AF_XY=first_or_default(variants.info.AF_XY, 0.0),
-        nhomalt_XY=first_or_default(variants.info.nhomalt_XY, 0),
-
-        # Population-specific (examples)
-        AC_afr=first_or_default(variants.info.AC_afr, 0),
-        AF_afr=first_or_default(variants.info.AF_afr, 0.0),
-        AN_afr=variants.info.AN_afr,
-
-        AC_amr=first_or_default(variants.info.AC_amr, 0),
-        AF_amr=first_or_default(variants.info.AF_amr, 0.0),
-        AN_amr=variants.info.AN_amr,
-
-        AC_eas=first_or_default(variants.info.AC_eas, 0),
-        AF_eas=first_or_default(variants.info.AF_eas, 0.0),
-        AN_eas=variants.info.AN_eas,
-
-        AC_nfe=first_or_default(variants.info.AC_nfe, 0),
-        AF_nfe=first_or_default(variants.info.AF_nfe, 0.0),
-        AN_nfe=variants.info.AN_nfe,
-
-        AC_sas=first_or_default(variants.info.AC_sas, 0),
-        AF_sas=first_or_default(variants.info.AF_sas, 0.0),
-        AN_sas=variants.info.AN_sas,
-
-        # Prediction scores
-        cadd_phred=variants.info.cadd_phred,
-        revel_max=variants.info.revel_max,
-        spliceai_ds_max=variants.info.spliceai_ds_max,
-
-        # Quality metrics
-        qual=variants.qual,
-        filters=hl.delimit(variants.filters, ','),
-    )
-
+    # Get available fields
+    info_fields = set(mt.info.dtype.fields)
     
-    return variants
-
-def filter_by_gene(variants_ht, gene_name):
-    """Filter variants by gene name using VEP annotations"""
-    # Filter using VEP transcript consequences
-    filtered = variants_ht.filter(
-        hl.any(lambda x: x.contains(f"|{gene_name}|"), variants_ht.vep)
-    )
-    return filtered
+    # def safe_get(field, default, is_array=False, index=0):
+    #     if field in info_fields:
+    #         f = variants.info[field]
+    #         if is_array:
+    #             return hl.if_else(hl.len(f) > index, f[index], default)
+    #         return f
+    #     return hl.missing(hl.dtype(type(default).__name__))
+    def safe_get(field, default, is_array=False, index=0):
+        """
+        Safely extract info field, handling missing fields and missing arrays
+        by coalescing to a default value.
+        """
+        if field not in info_fields:
+            return hl.literal(default)  # Field doesn't exist in header
+        
+        f = variants.info[field]
+        
+        if is_array:
+            # 1. Check if field is defined.
+            # 2. If yes, check if length is > index.
+            # 3. If yes, get element.
+            # 4. If no to 1 or 2, return default.
+            return hl.if_else(
+                hl.is_defined(f) & (hl.len(f) > index),
+                f[index],
+                hl.literal(default)
+            )
+        else:
+            # Coalesce returns the field if it's not missing,
+            # otherwise it returns the default value.
+            return hl.coalesce(f, hl.literal(default))
+    
+    # Base selection (always present)
+    selection = {
+        'chrom': variants.locus.contig,
+        'pos': variants.locus.position,
+        'ref': variants.alleles[0],
+        'alt': hl.delimit(variants.alleles[1:], ','),
+        'rsid': variants.rsid,
+        'qual': variants.qual,
+        'filters': hl.delimit(variants.filters, ','),
+    }
+    
+    # Add fields that exist
+    field_mapping = [
+        # Core allele stats
+        ('AC', 'AC', 0, True),
+        ('AN', 'AN', 0, False),
+        ('AF', 'AF', 0.0, True),
+        
+        # gnomAD specific
+        ('grpmax', 'grpmax', '', True),
+        ('faf95_max', 'fafmax_faf95_max', 0.0, True),
+        ('nhomalt', 'nhomalt', 0, True),
+        
+        # Sex-specific
+        ('AC_XX', 'AC_XX', 0, True),
+        ('AF_XX', 'AF_XX', 0.0, True),
+        ('AN_XX', 'AN_XX', 0, False),
+        ('AC_XY', 'AC_XY', 0, True),
+        ('AF_XY', 'AF_XY', 0.0, True),
+        ('AN_XY', 'AN_XY', 0, False),
+        
+        # Predictions
+        ('cadd_phred', 'cadd_phred', 0.0, False),
+        ('revel_max', 'revel_max', 0.0, False),
+        ('spliceai_ds_max', 'spliceai_ds_max', 0.0, False),
+        ('phylop', 'phylop', 0.0, False),
+        ('polyphen_max', 'polyphen_max', 0.0, False),
+        ('sift_max', 'sift_max', 0.0, False),
+        
+        # Quality
+        ('DP', 'DP', 0, False),
+        ('FS', 'FS', 0.0, False),
+        ('MQ', 'MQ', 0.0, False),
+        ('QD', 'QD', 0.0, False),
+    ]
+    
+    for new_name, field_name, default, is_array in field_mapping:
+        if field_name in info_fields:
+            selection[new_name] = safe_get(field_name, default, is_array)
+    
+    # Add population fields if they exist
+    for pop in ['afr', 'amr', 'asj', 'eas', 'fin', 'nfe', 'sas', 'mid']:
+        if f'AC_{pop}' in info_fields:
+            selection[f'AC_{pop}'] = safe_get(f'AC_{pop}', 0, True)
+        if f'AF_{pop}' in info_fields:
+            selection[f'AF_{pop}'] = safe_get(f'AF_{pop}', 0.0, True)
+        if f'AN_{pop}' in info_fields:
+            selection[f'AN_{pop}'] = safe_get(f'AN_{pop}', 0, False)
+    
+    # Add VEP if present
+    if 'vep' in info_fields:
+        selection['vep'] = variants.info.vep
+    
+    variants = variants.select(**selection)
+    return variants, list(selection.keys())
 
 def parse_variant_string(variant_str):
-    """Parse variant string like chr1-12345-A-T or rs123456"""
+    """Parse variant string"""
     if variant_str.startswith('rs'):
         return None, None, None, None, variant_str
     
-    # Try chr-pos-ref-alt format
     match = re.match(r'chr?(\w+)[:-](\d+)[:-]([ACGT]+)[:-]([ACGT]+)', variant_str, re.IGNORECASE)
     if match:
         chrom, pos, ref, alt = match.groups()
-        return f"chr{chrom}", int(pos), ref.upper(), alt.upper(), None
+        # Don't add 'chr' prefix if already there or if using numbers only
+        if not variant_str.startswith('chr'):
+            chrom = f"chr{chrom}" if mt_has_chr_prefix else chrom
+        else:
+            chrom = f"chr{chrom}"
+        return chrom, int(pos), ref.upper(), alt.upper(), None
     
     return None, None, None, None, None
 
@@ -132,14 +150,30 @@ init_hail()
 # Sidebar
 with st.sidebar:
     st.header("⚙️ Configuration")
-    mt_path = st.text_input("Matrix Table Path", value="../data/merged.mt")
+    mt_path = st.text_input("Matrix Table Path", value="/home/matheus/Documents/gnomeAD-tb/data/multisample_espanha.mt")
     
     if st.button("🔄 Load/Reload Data"):
         with st.spinner("Loading variant data..."):
             try:
-                st.session_state.variants_ht = load_variant_data(mt_path)
-                st.session_state.gene_list = load_gene_list()
+                st.session_state.variants_ht, st.session_state.available_fields = load_variant_data(mt_path)
+                st.session_state.info_fields = get_available_fields(mt_path)
                 st.success("✅ Data loaded!")
+                
+                # Show what's available
+                with st.expander("Available Data", expanded=False):
+                    st.write("**Fields:**", len(st.session_state.available_fields))
+                    
+                    # Check for special fields
+                    has_pop = any('AF_' in f and f.split('_')[1] in ['afr', 'amr', 'eas', 'nfe', 'sas'] 
+                                 for f in st.session_state.available_fields)
+                    has_pred = any(f in st.session_state.available_fields 
+                                  for f in ['cadd_phred', 'revel_max', 'spliceai_ds_max'])
+                    
+                    st.write("✅ Core stats (AC, AN, AF)" if 'AC' in st.session_state.available_fields else "❌ Core stats")
+                    st.write("✅ Population data" if has_pop else "❌ Population data")
+                    st.write("✅ Prediction scores" if has_pred else "❌ Prediction scores")
+                    st.write("✅ VEP annotations" if 'vep' in st.session_state.available_fields else "❌ VEP annotations")
+                    
             except Exception as e:
                 st.error(f"Error loading data: {e}")
     
@@ -147,89 +181,91 @@ with st.sidebar:
     st.markdown("### 📖 Help")
     st.markdown("""
     **Search by:**
-    - **Gene**: Enter gene symbol (e.g., BRCA1)
-    - **Variant**: Enter variant ID
-        - rsID: rs123456
-        - Position: chr1-12345-A-T
+    - **Variant**: 
+        - rsID: `rs123456`
+        - Position: `chr1-12345-A-T` or `1-12345-A-T`
+    - **Region**: `chr1:1000000-2000000` or `1:1000000-2000000`
     """)
 
 # Main content
-st.title("🧬 gnomAD Variant Browser")
-st.markdown("Interactive browser for gnomAD exome variant data")
+st.title("🧬 Variant Browser")
 
 if 'variants_ht' not in st.session_state:
     st.info("👈 Please load data using the sidebar")
     st.stop()
 
+# Check chromosome format
+sample_df = st.session_state.variants_ht.head(1).to_pandas()
+mt_has_chr_prefix = sample_df['chrom'].iloc[0].startswith('chr')
+
 variants_ht = st.session_state.variants_ht
+available_fields = st.session_state.available_fields
 
 # Search section
 st.markdown("---")
 col1, col2, col3 = st.columns([2, 2, 1])
 
 with col1:
-    search_type = st.radio("Search by:", ["Gene", "Variant", "Region"], horizontal=True)
+    search_type = st.radio("Search by:", ["Variant", "Region", "Browse All"], horizontal=True)
 
 with col2:
-    if search_type == "Gene":
-        gene_list = st.session_state.get('gene_list', [])
-        if gene_list:
-            search_query = st.selectbox("Select Gene:", [""] + gene_list)
-        else:
-            search_query = st.text_input("Enter Gene Symbol:", placeholder="e.g., BRCA1")
-    elif search_type == "Variant":
+    if search_type == "Variant":
         search_query = st.text_input("Enter Variant:", placeholder="e.g., rs123456 or chr1-12345-A-T")
-    else:
+    elif search_type == "Region":
         search_query = st.text_input("Enter Region:", placeholder="e.g., chr1:1000000-2000000")
+    else:
+        max_vars = st.number_input("Max variants to display:", min_value=100, max_value=50000, value=1000)
+        search_query = None
 
 with col3:
-    st.write("")  # Spacing
-    st.write("")  # Spacing
+    st.write("")
+    st.write("")
     search_button = st.button("🔍 Search", type="primary", use_container_width=True)
 
 # Execute search
 filtered_ht = None
-if search_button and search_query:
+if search_button or (search_type == "Browse All"):
     with st.spinner("Searching..."):
         try:
-            if search_type == "Gene":
-                filtered_ht = filter_by_gene(variants_ht, search_query.upper())
-                search_desc = f"Gene: {search_query}"
-            
-            elif search_type == "Variant":
+            if search_type == "Variant" and search_query:
                 chrom, pos, ref, alt, rsid = parse_variant_string(search_query)
                 if rsid:
                     filtered_ht = variants_ht.filter(variants_ht.rsid == rsid)
                     search_desc = f"rsID: {rsid}"
                 elif chrom and pos:
                     filtered_ht = variants_ht.filter(
-                        (variants_ht.chrom == chrom) &
-                        (variants_ht.pos == pos)
+                        (variants_ht.chrom == chrom) & (variants_ht.pos == pos)
                     )
                     if ref and alt:
                         filtered_ht = filtered_ht.filter(
-                            (filtered_ht.ref == ref) &
-                            (filtered_ht.alt == alt)
+                            (filtered_ht.ref == ref) & (filtered_ht.alt == alt)
                         )
                     search_desc = f"Variant: {search_query}"
                 else:
                     st.error("Invalid variant format")
                     st.stop()
             
-            else:  # Region
+            elif search_type == "Region" and search_query:
                 match = re.match(r'chr?(\w+)[:-](\d+)-(\d+)', search_query, re.IGNORECASE)
                 if match:
                     chrom, start, end = match.groups()
-                    chrom = f"chr{chrom}"
+                    chrom = f"chr{chrom}" if mt_has_chr_prefix and not search_query.startswith('chr') else chrom
+                    if not mt_has_chr_prefix and search_query.startswith('chr'):
+                        chrom = chrom[3:]
+                    
                     filtered_ht = variants_ht.filter(
                         (variants_ht.chrom == chrom) &
                         (variants_ht.pos >= int(start)) &
                         (variants_ht.pos <= int(end))
                     )
-                    search_desc = f"Region: {search_query}"
+                    search_desc = f"Region: {chrom}:{start}-{end}"
                 else:
-                    st.error("Invalid region format")
+                    st.error("Invalid region format. Use: chr1:1000000-2000000")
                     st.stop()
+            
+            else:  # Browse All
+                filtered_ht = variants_ht.head(max_vars)
+                search_desc = f"Browsing first {max_vars} variants"
             
             # Convert to pandas
             df = filtered_ht.to_pandas()
@@ -237,12 +273,14 @@ if search_button and search_query:
             if len(df) == 0:
                 st.warning(f"No variants found for {search_desc}")
             else:
-                st.success(f"Found {len(df):,} variants for {search_desc}")
+                st.success(f"Found {len(df):,} variants - {search_desc}")
                 st.session_state.current_df = df
                 st.session_state.search_desc = search_desc
         
         except Exception as e:
             st.error(f"Search error: {e}")
+            import traceback
+            st.code(traceback.format_exc())
 
 # Display results
 if 'current_df' in st.session_state:
@@ -250,19 +288,24 @@ if 'current_df' in st.session_state:
     
     # Summary metrics
     st.markdown("---")
-    st.subheader(f"📊 Summary: {st.session_state.search_desc}")
+    st.subheader(f"📊 Summary")
     
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
+    cols = st.columns(5)
+    with cols[0]:
         st.metric("Variants", f"{len(df):,}")
-    with col2:
-        st.metric("Mean AC", f"{df['AC'].mean():.2f}")
-    with col3:
-        st.metric("Mean AF", f"{df['AF'].mean():.6f}")
-    with col4:
-        st.metric("Mean FAF95", f"{df['faf95_max'].mean():.6f}")
-    with col5:
-        st.metric("Total Homozygotes", f"{df['nhomalt'].sum():,}")
+    
+    if 'AC' in df.columns:
+        with cols[1]:
+            st.metric("Mean AC", f"{df['AC'].mean():.2f}")
+    if 'AF' in df.columns:
+        with cols[2]:
+            st.metric("Mean AF", f"{df['AF'].mean():.6f}")
+    if 'faf95_max' in df.columns:
+        with cols[3]:
+            st.metric("Mean FAF95", f"{df['faf95_max'].mean():.6f}")
+    if 'nhomalt' in df.columns:
+        with cols[4]:
+            st.metric("Homozygotes", f"{df['nhomalt'].sum():,}")
     
     # Filters
     st.markdown("---")
@@ -270,25 +313,30 @@ if 'current_df' in st.session_state:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            af_min = st.number_input("Min AF", min_value=0.0, max_value=1.0, value=0.0, format="%.6f")
-            af_max = st.number_input("Max AF", min_value=0.0, max_value=1.0, value=1.0, format="%.6f")
+            if 'AF' in df.columns:
+                af_min = st.number_input("Min AF", 0.0, 1.0, 0.0, format="%.6f")
+                af_max = st.number_input("Max AF", 0.0, 1.0, 1.0, format="%.6f")
         
         with col2:
-            ac_min = st.number_input("Min AC", min_value=0, value=0)
-            ac_max = st.number_input("Max AC", min_value=0, value=int(df['AC'].max()))
+            if 'AC' in df.columns:
+                ac_min = st.number_input("Min AC", 0, int(df['AC'].max()), 0)
+                ac_max = st.number_input("Max AC", 0, int(df['AC'].max()), int(df['AC'].max()))
         
         with col3:
-            min_cadd = st.number_input("Min CADD", min_value=0.0, value=0.0)
-            min_revel = st.number_input("Min REVEL", min_value=0.0, max_value=1.0, value=0.0)
+            if 'cadd_phred' in df.columns:
+                min_cadd = st.number_input("Min CADD", 0.0, 50.0, 0.0)
+            if 'revel_max' in df.columns:
+                min_revel = st.number_input("Min REVEL", 0.0, 1.0, 0.0)
         
         # Apply filters
-        mask = (
-            (df['AF'] >= af_min) & (df['AF'] <= af_max) &
-            (df['AC'] >= ac_min) & (df['AC'] <= ac_max)
-        )
-        if min_cadd > 0:
+        mask = pd.Series([True] * len(df))
+        if 'AF' in df.columns:
+            mask &= (df['AF'] >= af_min) & (df['AF'] <= af_max)
+        if 'AC' in df.columns:
+            mask &= (df['AC'] >= ac_min) & (df['AC'] <= ac_max)
+        if 'cadd_phred' in df.columns and min_cadd > 0:
             mask &= (df['cadd_phred'] >= min_cadd)
-        if min_revel > 0:
+        if 'revel_max' in df.columns and min_revel > 0:
             mask &= (df['revel_max'] >= min_revel)
         
         df = df[mask]
@@ -296,60 +344,90 @@ if 'current_df' in st.session_state:
     
     # Visualizations
     st.markdown("---")
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 AF Distribution", "🌍 Population AF", "🔬 Predictions", "📋 Variant Table"])
     
-    with tab1:
-        col1, col2 = st.columns(2)
-        with col1:
-            fig = px.histogram(df, x='AF', nbins=50, title="Allele Frequency Distribution")
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            fig = px.scatter(df, x='AC', y='AF', hover_data=['rsid', 'chrom', 'pos'],
-                           title="Allele Count vs Frequency", opacity=0.6)
-            st.plotly_chart(fig, use_container_width=True)
+    # Create tabs based on available data
+    tab_names = ["📋 Variant Table"]
+    if 'AF' in df.columns:
+        tab_names.insert(0, "📈 AF Distribution")
     
-    with tab2:
-        pop_cols = ['AF_afr', 'AF_amr', 'AF_eas', 'AF_nfe', 'AF_sas']
-        pop_names = ['African', 'Latino', 'East Asian', 'European', 'South Asian']
+    pop_cols = [c for c in df.columns if c.startswith('AF_') and c.split('_')[1] in 
+                ['afr', 'amr', 'asj', 'eas', 'fin', 'nfe', 'sas', 'mid']]
+    if pop_cols:
+        tab_names.insert(-1, "🌍 Populations")
+    
+    pred_cols = [c for c in df.columns if c in ['cadd_phred', 'revel_max', 'spliceai_ds_max']]
+    if pred_cols:
+        tab_names.insert(-1, "🔬 Predictions")
+    
+    tabs = st.tabs(tab_names)
+    tab_idx = 0
+    
+    # AF Distribution tab
+    if 'AF' in df.columns:
+        with tabs[tab_idx]:
+            col1, col2 = st.columns(2)
+            with col1:
+                fig = px.histogram(df, x='AF', nbins=50, title="Allele Frequency Distribution")
+                st.plotly_chart(fig, use_container_width=True)
+            with col2:
+                if 'AC' in df.columns:
+                    fig = px.scatter(df, x='AC', y='AF', hover_data=['rsid', 'chrom', 'pos'],
+                                   title="Allele Count vs Frequency", opacity=0.6)
+                    st.plotly_chart(fig, use_container_width=True)
+        tab_idx += 1
+    
+    # Population tab
+    if pop_cols:
+        with tabs[tab_idx]:
+            pop_names = [c.split('_')[1].upper() for c in pop_cols]
+            pop_means = [df[col].mean() for col in pop_cols]
+            
+            fig = go.Figure(data=[go.Bar(x=pop_names, y=pop_means)])
+            fig.update_layout(title="Mean Allele Frequency by Population",
+                             xaxis_title="Population", yaxis_title="Mean AF")
+            st.plotly_chart(fig, use_container_width=True)
+        tab_idx += 1
+    
+    # Predictions tab
+    if pred_cols:
+        with tabs[tab_idx]:
+            cols = st.columns(len(pred_cols))
+            for i, col in enumerate(pred_cols):
+                with cols[i]:
+                    fig = px.histogram(df, x=col, nbins=30, title=f"{col.replace('_', ' ').title()} Distribution")
+                    st.plotly_chart(fig, use_container_width=True)
+        tab_idx += 1
+    
+    # Variant table tab
+    with tabs[tab_idx]:
+        # Select columns to display
+        display_cols = ['chrom', 'pos', 'rsid', 'ref', 'alt']
+        if 'AC' in df.columns:
+            display_cols.append('AC')
+        if 'AN' in df.columns:
+            display_cols.append('AN')
+        if 'AF' in df.columns:
+            display_cols.append('AF')
+        if 'faf95_max' in df.columns:
+            display_cols.append('faf95_max')
+        if 'nhomalt' in df.columns:
+            display_cols.append('nhomalt')
+        if 'cadd_phred' in df.columns:
+            display_cols.append('cadd_phred')
+        if 'revel_max' in df.columns:
+            display_cols.append('revel_max')
         
-        # Average AF by population
-        pop_means = [df[col].mean() for col in pop_cols]
-        fig = go.Figure(data=[go.Bar(x=pop_names, y=pop_means)])
-        fig.update_layout(title="Mean Allele Frequency by Population", 
-                         xaxis_title="Population", yaxis_title="Mean AF")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Heatmap for variants
-        if len(df) <= 100:
-            pop_data = df[pop_cols].fillna(0)
-            fig = px.imshow(pop_data.T, labels=dict(x="Variant Index", y="Population", color="AF"),
-                          y=pop_names, aspect="auto", title="Population-specific Allele Frequencies")
-            st.plotly_chart(fig, use_container_width=True)
-    
-    with tab3:
-        col1, col2 = st.columns(2)
-        with col1:
-            fig = px.scatter(df, x='cadd_phred', y='revel_max', 
-                           hover_data=['rsid', 'chrom', 'pos', 'AF'],
-                           title="CADD vs REVEL Scores", opacity=0.6)
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            fig = px.histogram(df, x='spliceai_ds_max', nbins=30,
-                             title="SpliceAI Score Distribution")
-            st.plotly_chart(fig, use_container_width=True)
-    
-    with tab4:
-        # Display columns
-        display_cols = ['chrom', 'pos', 'rsid', 'ref', 'alt', 'AC', 'AN', 'AF', 
-                       'faf95_max', 'nhomalt', 'grpmax', 'cadd_phred', 'revel_max']
+        # Format numeric columns
+        format_dict = {
+            'AF': '{:.6f}',
+            'faf95_max': '{:.6f}',
+            'cadd_phred': '{:.2f}',
+            'revel_max': '{:.3f}'
+        }
+        format_dict = {k: v for k, v in format_dict.items() if k in display_cols}
         
         st.dataframe(
-            df[display_cols].style.format({
-                'AF': '{:.6f}',
-                'faf95_max': '{:.6f}',
-                'cadd_phred': '{:.2f}',
-                'revel_max': '{:.3f}'
-            }),
+            df[display_cols].style.format(format_dict),
             use_container_width=True,
             height=400
         )
@@ -359,6 +437,6 @@ if 'current_df' in st.session_state:
         st.download_button(
             "📥 Download Results (CSV)",
             data=csv,
-            file_name=f"gnomad_variants_{st.session_state.search_desc.replace(' ', '_')}.csv",
+            file_name=f"variants_{st.session_state.search_desc.replace(' ', '_').replace(':', '-')}.csv",
             mime="text/csv"
         )
