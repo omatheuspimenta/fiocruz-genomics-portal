@@ -9,16 +9,42 @@ pd.set_option('display.max_columns', None)
 
 from decimal import Decimal
 import numpy as np
+import tempfile
+import os
 
+# Define complete Hail schema with proper types
 HAIL_SCHEMA = {
     'chromosome': hl.tstr,
     'position': hl.tint32,
     'ref': hl.tstr,
     'alt': hl.tstr,
     'vid': hl.tstr,
-    # floats (AF fields)
+    'hgvsg': hl.tstr,
+    'variant_type': hl.tstr,
+    'begin': hl.tint32,
+    'end': hl.tint32,
+    
+    # Quality metrics
+    'filters': hl.tstr,
+    'mapping_quality': hl.tfloat64,
+    'fisher_strand_bias': hl.tfloat64,
+    'quality': hl.tfloat64,
+    'cytogenetic_band': hl.tstr,
+    
+    # Conservation scores
+    'phylop_score': hl.tfloat64,
+    'phylop_primate_score': hl.tfloat64,
+    'gerp_score': hl.tfloat64,
+    'dann_score': hl.tfloat64,
+    
+    # dbSNP
+    'rsid': hl.tstr,
+    
+    # gnomAD genome frequencies
     'gnomad_af': hl.tfloat64,
-    'gnomad_exome_af': hl.tfloat64,
+    'gnomad_ac': hl.tint32,
+    'gnomad_an': hl.tint32,
+    'gnomad_hc': hl.tint32,
     'gnomad_afr_af': hl.tfloat64,
     'gnomad_amr_af': hl.tfloat64,
     'gnomad_eas_af': hl.tfloat64,
@@ -27,8 +53,49 @@ HAIL_SCHEMA = {
     'gnomad_asj_af': hl.tfloat64,
     'gnomad_sas_af': hl.tfloat64,
     'gnomad_oth_af': hl.tfloat64,
-    # transcript summaries
+    'gnomad_failed_filter': hl.tbool,
+    
+    # gnomAD exome frequencies
+    'gnomad_exome_af': hl.tfloat64,
+    'gnomad_exome_ac': hl.tint32,
+    'gnomad_exome_an': hl.tint32,
+    'gnomad_exome_hc': hl.tint32,
+    'gnomad_exome_failed_filter': hl.tbool,
+    
+    # TOPMed
+    'topmed_af': hl.tfloat64,
+    'topmed_ac': hl.tint32,
+    'topmed_an': hl.tint32,
+    'topmed_hc': hl.tint32,
+    'topmed_failed_filter': hl.tbool,
+    
+    # ClinVar
+    'clinvar_significance': hl.tstr,
+    'clinvar_id': hl.tstr,
+    
+    # Transcript count
     'n_transcripts': hl.tint32,
+    
+    # Transcripts - nested structure
+    'transcripts': hl.tarray(hl.tstruct(
+        transcript_id=hl.tstr,
+        source=hl.tstr,
+        bio_type=hl.tstr,
+        gene_id=hl.tstr,
+        hgnc=hl.tstr,
+        consequences=hl.tarray(hl.tstr),
+        impact=hl.tstr,
+        is_canonical=hl.tbool,
+    )),
+    
+    # Samples - nested structure (optional)
+    'samples': hl.tarray(hl.tstruct(
+        genotype=hl.tstr,
+        variant_frequencies=hl.tarray(hl.tfloat64),
+        total_depth=hl.tint32,
+        genotype_quality=hl.tint32,
+        allele_depths=hl.tarray(hl.tint32),
+    )),
 }
 
 
@@ -39,14 +106,13 @@ def _convert_for_hail(obj):
     if isinstance(obj, list):
         return [_convert_for_hail(v) for v in obj]
     if isinstance(obj, Decimal):
-        # choose float or str depending on required precision
         return float(obj)
-    if isinstance(obj, (np.floating, np.float32, np.float64)):
+    if isinstance(obj, (np.floating, np.float32, np.float64)): # type: ignore[arg-type]
         return float(obj)
-    if isinstance(obj, (np.integer, np.int32, np.int64)):
+    if isinstance(obj, (np.integer, np.int32, np.int64)): # type: ignore[arg-type]
         return int(obj)
-    # leave None, str, bool, int, float as-is
     return obj
+
 
 class BaseClass(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(extra='allow')
@@ -198,6 +264,7 @@ class AnnotatedData:
     def multiple_to_df(items: List[BaseClass], key: str = "") -> pd.DataFrame:
         return pd.concat((item.to_df(key) for item in items))
 
+
 class Parser:
     def __init__(self, annotated_data: AnnotatedData):
         self.annotated_data = annotated_data
@@ -247,111 +314,117 @@ class Parser:
         )
         return positions
 
-######
-"""
-Convert Nirvana JSON to Hail Table using the PROVIDED Pydantic parser
-"""
+
 def variant_to_dict(
     position: Position,
     variant: Variant,
     include_transcripts: bool = True
 ) -> Dict[str, Any]:
     """
-    Convert a Pydantic Variant object to a dictionary for Hail
-    
-    Parameters:
-    -----------
-    position : Position
-        Position object containing variant
-    variant : Variant
-        Variant object to convert
-    include_transcripts : bool
-        Whether to include transcripts as nested array
+    Convert a Pydantic Variant object to a dictionary for Hail.
+    Ensures ALL schema fields are present with None as default.
     """
-    # Get variant dict from Pydantic model
     variant_dict = variant.model_dump()
     
-    # Base record with position info
+    # Initialize with ALL fields from schema set to None
     record = {
-        # Locus
         'chromosome': position.chromosome,
         'position': position.position,
         'ref': position.refAllele,
         'alt': variant.altAllele,
-        
-        # Variant identifiers
         'vid': variant.vid,
         'hgvsg': variant.hgvsg,
         'variant_type': variant.variantType,
         'begin': variant.begin,
         'end': variant.end,
-        
-        # Position-level quality
         'filters': ','.join(position.filters) if position.filters else None,
         'mapping_quality': position.mappingQuality,
         'fisher_strand_bias': variant_dict.get('fisherStrandBias'),
         'quality': variant_dict.get('quality'),
         'cytogenetic_band': position.cytogeneticBand,
-        
-        # Conservation scores
         'phylop_score': variant.phylopScore,
         'phylop_primate_score': variant.phyloPPrimateScore,
         'gerp_score': variant_dict.get('gerpScore'),
         'dann_score': variant_dict.get('dannScore'),
+        'rsid': None,
+        # Initialize all gnomAD genome fields
+        'gnomad_af': None,
+        'gnomad_ac': None,
+        'gnomad_an': None,
+        'gnomad_hc': None,
+        'gnomad_afr_af': None,
+        'gnomad_amr_af': None,
+        'gnomad_eas_af': None,
+        'gnomad_fin_af': None,
+        'gnomad_nfe_af': None,
+        'gnomad_asj_af': None,
+        'gnomad_sas_af': None,
+        'gnomad_oth_af': None,
+        'gnomad_failed_filter': None,
+        # Initialize all gnomAD exome fields
+        'gnomad_exome_af': None,
+        'gnomad_exome_ac': None,
+        'gnomad_exome_an': None,
+        'gnomad_exome_hc': None,
+        'gnomad_exome_failed_filter': None,
+        # Initialize TOPMed fields
+        'topmed_af': None,
+        'topmed_ac': None,
+        'topmed_an': None,
+        'topmed_hc': None,
+        'topmed_failed_filter': None,
+        # Initialize ClinVar fields
+        'clinvar_significance': None,
+        'clinvar_id': None,
+        # Initialize transcript fields
+        'n_transcripts': 0,
+        'transcripts': [],
+        'samples': None,
     }
     
-    # Extract dbSNP ID
+    # Extract dbSNP
     dbsnp = variant_dict.get('dbsnp', {})
     if dbsnp and isinstance(dbsnp, dict):
         rsids = dbsnp.get('ids', [])
         record['rsid'] = rsids[0] if rsids else None
-    else:
-        record['rsid'] = None
     
-    # Extract gnomAD genome frequencies
+    # Extract gnomAD genome
     gnomad = variant_dict.get('gnomad', {})
     if gnomad:
-        record.update({
-            'gnomad_af': gnomad.get('allAf'),
-            'gnomad_ac': gnomad.get('allAc'),
-            'gnomad_an': gnomad.get('allAn'),
-            'gnomad_hc': gnomad.get('allHc'),
-            'gnomad_afr_af': gnomad.get('afrAf'),
-            'gnomad_amr_af': gnomad.get('amrAf'),
-            'gnomad_eas_af': gnomad.get('easAf'),
-            'gnomad_fin_af': gnomad.get('finAf'),
-            'gnomad_nfe_af': gnomad.get('nfeAf'),
-            'gnomad_asj_af': gnomad.get('asjAf'),
-            'gnomad_sas_af': gnomad.get('sasAf'),
-            'gnomad_oth_af': gnomad.get('othAf'),
-            'gnomad_failed_filter': gnomad.get('failedFilter'),
-        })
+        record['gnomad_af'] = gnomad.get('allAf')
+        record['gnomad_ac'] = gnomad.get('allAc')
+        record['gnomad_an'] = gnomad.get('allAn')
+        record['gnomad_hc'] = gnomad.get('allHc')
+        record['gnomad_afr_af'] = gnomad.get('afrAf')
+        record['gnomad_amr_af'] = gnomad.get('amrAf')
+        record['gnomad_eas_af'] = gnomad.get('easAf')
+        record['gnomad_fin_af'] = gnomad.get('finAf')
+        record['gnomad_nfe_af'] = gnomad.get('nfeAf')
+        record['gnomad_asj_af'] = gnomad.get('asjAf')
+        record['gnomad_sas_af'] = gnomad.get('sasAf')
+        record['gnomad_oth_af'] = gnomad.get('othAf')
+        record['gnomad_failed_filter'] = gnomad.get('failedFilter')
     
-    # Extract gnomAD exome frequencies
+    # Extract gnomAD exome
     gnomad_exome = variant_dict.get('gnomad-exome', {})
     if gnomad_exome:
-        record.update({
-            'gnomad_exome_af': gnomad_exome.get('allAf'),
-            'gnomad_exome_ac': gnomad_exome.get('allAc'),
-            'gnomad_exome_an': gnomad_exome.get('allAn'),
-            'gnomad_exome_hc': gnomad_exome.get('allHc'),
-            'gnomad_exome_failed_filter': gnomad_exome.get('failedFilter'),
-        })
+        record['gnomad_exome_af'] = gnomad_exome.get('allAf')
+        record['gnomad_exome_ac'] = gnomad_exome.get('allAc')
+        record['gnomad_exome_an'] = gnomad_exome.get('allAn')
+        record['gnomad_exome_hc'] = gnomad_exome.get('allHc')
+        record['gnomad_exome_failed_filter'] = gnomad_exome.get('failedFilter')
     
-    # Extract TOPMed frequencies
+    # Extract TOPMed
     topmed = variant_dict.get('topmed', {})
     if topmed:
-        record.update({
-            'topmed_af': topmed.get('allAf'),
-            'topmed_ac': topmed.get('allAc'),
-            'topmed_an': topmed.get('allAn'),
-            'topmed_hc': topmed.get('allHc'),
-            'topmed_failed_filter': topmed.get('failedFilter'),
-        })
+        record['topmed_af'] = topmed.get('allAf')
+        record['topmed_ac'] = topmed.get('allAc')
+        record['topmed_an'] = topmed.get('allAn')
+        record['topmed_hc'] = topmed.get('allHc')
+        record['topmed_failed_filter'] = topmed.get('failedFilter')
     
-    # Extract ClinVar if present
+    # Extract ClinVar
     clinvar = variant_dict.get('clinvar', {})
-
     if clinvar:
         if isinstance(clinvar, dict):
             record['clinvar_significance'] = (
@@ -362,25 +435,23 @@ def variant_to_dict(
             record['clinvar_id'] = (
                 ";".join(map(str, clinvar['id']))
                 if isinstance(clinvar.get('id'), list)
-                else str(clinvar.get('id'))
+                else str(clinvar.get('id')) if clinvar.get('id') else None
             )
-    
         elif isinstance(clinvar, list):
             record['clinvar_significance'] = ";".join(
-                ";".join(map(str, c.get('significance')))
+                ";".join(map(str, c.get('significance', [])))
                 if isinstance(c.get('significance'), list)
                 else str(c.get('significance', ''))
                 for c in clinvar if isinstance(c, dict)
-            )
+            ) or None
             record['clinvar_id'] = ";".join(
-                ";".join(map(str, c.get('id')))
+                ";".join(map(str, c.get('id', [])))
                 if isinstance(c.get('id'), list)
                 else str(c.get('id', ''))
                 for c in clinvar if isinstance(c, dict)
-            )
-
+            ) or None
     
-    # Include transcripts as nested structure
+    # Include transcripts
     if include_transcripts and variant.transcripts:
         record['transcripts'] = [
             {
@@ -396,11 +467,8 @@ def variant_to_dict(
             for t in variant.transcripts
         ]
         record['n_transcripts'] = len(variant.transcripts)
-    else:
-        record['transcripts'] = []
-        record['n_transcripts'] = 0
     
-    # Include sample genotypes if present
+    # Include samples
     if position.samples:
         record['samples'] = [
             {
@@ -412,8 +480,6 @@ def variant_to_dict(
             }
             for s in position.samples
         ]
-    else:
-        record['samples'] = None
     
     return record
 
@@ -422,21 +488,24 @@ def convert_nirvana_to_hail(
     nirvana_json_file: str,
     output_path: str,
     max_positions: Optional[int] = None,
-    batch_size: int = 5000,
+    batch_size: int = 10000,
+    temp_dir: Optional[str] = None,
 ) -> hl.Table:
     """
-    Convert Nirvana JSON to Hail Table using the provided Pydantic parser
+    Convert Nirvana JSON to Hail Table using batched approach with disk-based intermediate tables
     
     Parameters:
     -----------
     nirvana_json_file : str
         Path to Nirvana JSON.gz file
     output_path : str
-        Path to save Hail Table
+        Path to save final Hail Table
     max_positions : int, optional
-        Limit number of positions to process (for testing)
+        Limit number of positions (for testing)
     batch_size : int
-        Number of variants to accumulate before creating intermediate table
+        Number of variants per batch (default 10000)
+    temp_dir : str, optional
+        Directory for temporary batch tables
     """
     
     print(f"Loading Nirvana data from {nirvana_json_file}...")
@@ -445,67 +514,84 @@ def convert_nirvana_to_hail(
     print("\nData sources:")
     print(annotated_data.data_sources)
     
+    # Setup temp directory
+    if temp_dir is None:
+        temp_dir = tempfile.mkdtemp(prefix="nirvana_batches_")
+    os.makedirs(temp_dir, exist_ok=True)
+    print(f"\nUsing temp directory: {temp_dir}")
+    
     print("\nProcessing positions...")
-    all_records = []
+    batch_records = []
     position_count = 0
     variant_count = 0
-    batch_tables = []
+    batch_num = 0
+    batch_paths = []
     
-    # Stream through positions using the parser's generator
     for position_dict in annotated_data.positions:
         if position_count % 1000 == 0 and position_count > 0:
             print(f"  Processed {position_count} positions, {variant_count} variants...")
-
         
-        # Use Pydantic to validate and parse
         position = Position.model_validate(position_dict)
         
-        # Process each variant in this position
         if position.variants:
             for variant in position.variants:
                 record = variant_to_dict(position, variant, include_transcripts=True)
-                all_records.append(record)
+                batch_records.append(record)
                 variant_count += 1
                 
-                # Create intermediate table when batch is full
-                if len(all_records) >= batch_size:
-                    print(f"  Creating batch table with {len(all_records)} variants...")
-                    all_records_clean = [_convert_for_hail(r) for r in all_records]
-                    batch_ht = hl.Table.parallelize(all_records_clean, partial_type=HAIL_SCHEMA)
-                    print("  Annotating locus and alleles...")
+                # Write batch to disk when full
+                if len(batch_records) >= batch_size:
+                    batch_path = os.path.join(temp_dir, f"batch_{batch_num}.ht")
+                    print(f"  Writing batch {batch_num} with {len(batch_records)} variants to {batch_path}")
+                    
+                    # Convert and create table with schema
+                    clean_records = [_convert_for_hail(r) for r in batch_records]
+                    batch_ht = hl.Table.parallelize(clean_records, schema=hl.tstruct(**HAIL_SCHEMA))
+                    
+                    # Add locus and alleles
                     batch_ht = batch_ht.annotate(
                         locus=hl.locus(batch_ht.chromosome, batch_ht.position, reference_genome='GRCh38'),
                         alleles=hl.array([batch_ht.ref, batch_ht.alt])
                     )
-                    batch_tables.append(batch_ht)
-                    all_records = []
+                    
+                    # Write to disk
+                    batch_ht.write(batch_path, overwrite=True)
+                    batch_paths.append(batch_path)
+                    
+                    # Clear memory
+                    batch_records = []
+                    batch_num += 1
         
         position_count += 1
         
-        # Stop if max_positions reached
         if max_positions and position_count >= max_positions:
             print(f"Reached max_positions limit of {max_positions}")
             break
     
-    # Process remaining records
-    if all_records:
-        print(f"  Creating final batch with {len(all_records)} variants...")
-        all_records_clean = [_convert_for_hail(r) for r in all_records]
-        batch_ht = hl.Table.parallelize(all_records_clean)
+    # Handle remaining records
+    if batch_records:
+        batch_path = os.path.join(temp_dir, f"batch_{batch_num}.ht")
+        print(f"  Writing final batch {batch_num} with {len(batch_records)} variants to {batch_path}")
+        
+        clean_records = [_convert_for_hail(r) for r in batch_records]
+        batch_ht = hl.Table.parallelize(clean_records, schema=hl.tstruct(**HAIL_SCHEMA))
         batch_ht = batch_ht.annotate(
             locus=hl.locus(batch_ht.chromosome, batch_ht.position, reference_genome='GRCh38'),
             alleles=hl.array([batch_ht.ref, batch_ht.alt])
         )
-        batch_tables.append(batch_ht)
+        batch_ht.write(batch_path, overwrite=True)
+        batch_paths.append(batch_path)
     
     print(f"\nTotal: {position_count} positions, {variant_count} variants")
+    print(f"Created {len(batch_paths)} batch tables")
     
-    # Union all batch tables
-    print("Combining batches...")
-    if len(batch_tables) == 1:
-        ht = batch_tables[0]
+    # Union all batches
+    print("\nCombining batches...")
+    if len(batch_paths) == 1:
+        ht = hl.read_table(batch_paths[0])
     else:
-        ht = batch_tables[0].union(*batch_tables[1:])
+        tables = [hl.read_table(path) for path in batch_paths]
+        ht = tables[0].union(*tables[1:])
     
     # Key by locus and alleles
     print("Setting key (locus, alleles)...")
@@ -514,12 +600,9 @@ def convert_nirvana_to_hail(
     # Add computed annotations
     print("Adding computed annotations...")
     ht = ht.annotate(
-        # Maximum gnomAD AF across genome and exome
         max_gnomad_af=hl.max(
             hl.array([ht.gnomad_af, ht.gnomad_exome_af]).filter(hl.is_defined)
         ),
-        
-        # Maximum population-specific AF
         max_pop_af=hl.max(
             hl.array([
                 ht.gnomad_afr_af, ht.gnomad_amr_af, ht.gnomad_eas_af,
@@ -527,27 +610,31 @@ def convert_nirvana_to_hail(
                 ht.gnomad_sas_af, ht.gnomad_oth_af
             ]).filter(hl.is_defined)
         ),
-        
-        # Get canonical transcript (if exists)
-        canonical_transcript=hl.or_missing(
-            hl.len(ht.transcripts) > 0,
-            ht.transcripts.filter(lambda t: t.is_canonical)[0]
+        # Get canonical transcript safely - check if any exist after filtering
+        canonical_transcript=hl.bind(
+            lambda canonical_transcripts: hl.if_else(
+                hl.len(canonical_transcripts) > 0,
+                canonical_transcripts[0],
+                hl.missing(ht.transcripts.dtype.element_type)
+            ),
+            ht.transcripts.filter(lambda t: t.is_canonical)
         ),
-        
-        # All unique consequences across transcripts
         all_consequences=hl.set(
             hl.flatten(ht.transcripts.map(lambda t: t.consequences))
         ),
-        
-        # Gene symbols from transcripts
         genes=hl.set(
             ht.transcripts.map(lambda t: t.hgnc).filter(hl.is_defined)
         ),
     )
     
-    # Write to disk
-    print(f"\nWriting Hail Table to {output_path}...")
+    # Write final table
+    print(f"\nWriting final Hail Table to {output_path}...")
     ht = ht.checkpoint(output_path, overwrite=True)
+    
+    # Cleanup temp files
+    print(f"\nCleaning up temp directory: {temp_dir}")
+    import shutil
+    shutil.rmtree(temp_dir, ignore_errors=True)
     
     # Summary
     print("\n" + "="*60)
@@ -561,143 +648,26 @@ def convert_nirvana_to_hail(
     return ht
 
 
-def create_transcript_exploded_table(
-    nirvana_json_file: str,
-    output_path: str,
-    max_positions: Optional[int] = None,
-) -> hl.Table:
-    """
-    Create table with one row per variant-transcript combination
-    Uses the provided Pydantic parser
-    """
-    print(f"Loading Nirvana data from {nirvana_json_file}...")
-    annotated_data = AnnotatedData(filename=nirvana_json_file)
-    
-    print("Processing positions (transcript-exploded mode)...")
-    all_records = []
-    position_count = 0
-    
-    for position_dict in annotated_data.positions:
-        if position_count % 1000 == 0 and position_count > 0:
-            print(f"  Processed {position_count} positions, {len(all_records)} transcript records...")
-        
-        position = Position.model_validate(position_dict)
-        
-        if position.variants:
-            for variant in position.variants:
-                # Base variant info
-                base_record = {
-                    'chromosome': position.chromosome,
-                    'position': position.position,
-                    'ref': position.refAllele,
-                    'alt': variant.altAllele,
-                    'vid': variant.vid,
-                    'variant_type': variant.variantType,
-                    'hgvsg': variant.hgvsg,
-                    'gnomad_af': variant.model_dump().get('gnomad', {}).get('allAf'),
-                    'gnomad_exome_af': variant.model_dump().get('gnomad-exome', {}).get('allAf'),
-                    'phylop_score': variant.phylopScore,
-                    'gerp_score': variant.model_dump().get('gerpScore'),
-                }
-                
-                # Explode by transcript
-                if variant.transcripts:
-                    for trans in variant.transcripts:
-                        record = base_record.copy()
-                        record.update({
-                            'transcript_id': trans.transcript,
-                            'gene_id': trans.geneId,
-                            'hgnc': trans.hgnc,
-                            'source': trans.source,
-                            'bio_type': trans.bioType,
-                            'consequences': trans.consequence if trans.consequence else [],
-                            'impact': trans.impact,
-                            'is_canonical': trans.isCanonical if trans.isCanonical else False,
-                        })
-                        all_records.append(record)
-                else:
-                    # Variant without transcripts
-                    all_records.append(base_record)
-        
-        position_count += 1
-        if max_positions and position_count >= max_positions:
-            break
-    
-    print(f"Creating Hail Table with {len(all_records)} transcript records...")
-    ht = hl.Table.parallelize(all_records)
-    
-    ht = ht.annotate(
-        locus=hl.locus(ht.chromosome, ht.position, reference_genome='GRCh38'),
-        alleles=hl.array([ht.ref, ht.alt])
-    )
-    
-    # Key by locus, alleles, and transcript
-    ht = ht.key_by(ht.locus, ht.alleles, ht.transcript_id)
-    
-    print(f"Writing to {output_path}...")
-    ht = ht.checkpoint(output_path, overwrite=True)
-    
-    print(f"\nDone! Total transcript records: {ht.count()}")
-    return ht
-
-
 # Example usage
 if __name__ == "__main__":
-    hl.init()
-    print("Spark master:", hl.default_reference().name)
-    print("Default parallelism:", hl.spark_context().defaultParallelism)
+    REFERENCE_GENOME = 'GRCh38'
+
+    LOG_PATH = '../logs/hail'
+    print("Initializing Hail...")
+    hl.init(app_name='Parse Illumina JSON', log=LOG_PATH, default_reference=REFERENCE_GENOME)
     
-    json_file = "/home/matheus/Documents/gnomeAD-tb/data/NA12878.bed.filtered.json.gz"
+    # print("Spark master:", hl.default_reference().name)
+    # print("Default parallelism:", hl.spark_context().defaultParallelism)
+    
+    json_file = "../data/NA12878.bed.filtered.json.gz"
     
     print("="*60)
     print("VARIANT-LEVEL TABLE (one row per variant)")
     print("="*60)
     
-    # Create variant-level table
     ht = convert_nirvana_to_hail(
         nirvana_json_file=json_file,
-        output_path="nirvana_variants.ht",
-        max_positions=None,  # Use None for all data, or a number for testing
-        batch_size=5000,
+        output_path="../data/nirvana_variants.ht",
+        max_positions=None,  # Use None for all data
+        batch_size=5000,     # Adjust based on available memory
     )
-    
-    # Example queries
-    print("\n" + "="*60)
-    print("EXAMPLE QUERIES")
-    print("="*60)
-    
-    print("\n1. First 5 variants:")
-    ht.show(5)
-    
-    print("\n2. Rare variants (gnomAD AF < 0.01):")
-    rare = ht.filter(
-        (ht.max_gnomad_af < 0.01) | hl.is_missing(ht.max_gnomad_af)
-    )
-    print(f"   Count: {rare.count()}")
-    
-    print("\n3. Loss-of-function variants:")
-    lof = ht.filter(
-        ht.all_consequences.contains('stop_gained') |
-        ht.all_consequences.contains('frameshift_variant') |
-        ht.all_consequences.contains('splice_donor_variant')
-    )
-    print(f"   Count: {lof.count()}")
-    
-    print("\n4. Variants in specific gene (e.g., BRCA1):")
-    gene_variants = ht.filter(ht.genes.contains('BRCA1'))
-    print(f"   Count: {gene_variants.count()}")
-    
-    print("\n5. High conservation variants:")
-    conserved = ht.filter(
-        (ht.phylop_score > 2) & (ht.gerp_score > 2)
-    )
-    print(f"   Count: {conserved.count()}")
-    
-    # Uncomment to create transcript-exploded table
-    # print("\n" + "="*60)
-    # print("TRANSCRIPT-EXPLODED TABLE")
-    # print("="*60)
-    # ht_transcripts = create_transcript_exploded_table(
-    #     nirvana_json_file=json_file,
-    #     output_path="nirvana_transcripts.ht",
-    # )
