@@ -484,20 +484,20 @@ def variant_to_dict(
     return record
 
 
-def convert_nirvana_to_hail(
-    nirvana_json_file: str,
+def convert_to_hail(
+    json_file: str,
     output_path: str,
     max_positions: Optional[int] = None,
     batch_size: int = 10000,
     temp_dir: Optional[str] = None,
 ) -> hl.Table:
     """
-    Convert Nirvana JSON to Hail Table using batched approach with disk-based intermediate tables
+    Convert JSON to Hail Table using batched approach with disk-based intermediate tables
     
     Parameters:
     -----------
-    nirvana_json_file : str
-        Path to Nirvana JSON.gz file
+    json_file : str
+        Path to JSON.gz file
     output_path : str
         Path to save final Hail Table
     max_positions : int, optional
@@ -508,15 +508,15 @@ def convert_nirvana_to_hail(
         Directory for temporary batch tables
     """
     
-    print(f"Loading Nirvana data from {nirvana_json_file}...")
-    annotated_data = AnnotatedData(filename=nirvana_json_file)
+    print(f"Loading data from {json_file}...")
+    annotated_data = AnnotatedData(filename=json_file)
     
     print("\nData sources:")
     print(annotated_data.data_sources)
     
     # Setup temp directory
     if temp_dir is None:
-        temp_dir = tempfile.mkdtemp(prefix="nirvana_batches_")
+        temp_dir = tempfile.mkdtemp(prefix="_batches_")
     os.makedirs(temp_dir, exist_ok=True)
     print(f"\nUsing temp directory: {temp_dir}")
     
@@ -665,9 +665,9 @@ if __name__ == "__main__":
     print("VARIANT-LEVEL TABLE (one row per variant)")
     print("="*60)
     
-    ht = convert_nirvana_to_hail(
-        nirvana_json_file=json_file,
-        output_path="../data/nirvana_variants.ht",
+    ht = convert_to_hail(
+        json_file=json_file,
+        output_path="../data/variants.ht",
         max_positions=None,  # Use None for all data
         batch_size=5000,     # Adjust based on available memory
     )
