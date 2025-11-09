@@ -3,11 +3,12 @@ import hail as hl
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import re
+# from plotly.subplots import make_subplots
+import regex as re
+import numpy as np
 
 # Configure Streamlit page
-st.set_page_config(page_title="Nirvana Variant Browser", layout="wide", page_icon="🧬")
+st.set_page_config(page_title="Variant Browser", layout="wide", page_icon="🧬")
 
 @st.cache_resource
 def init_hail():
@@ -133,16 +134,15 @@ init_hail()
 
 # Sidebar
 with st.sidebar:
-    st.image("https://via.placeholder.com/150x50/4CAF50/FFFFFF?text=Nirvana+Browser", use_container_width=True)
-    st.header("⚙️ Configuration")
+    st.header("Configuration")
     
     table_path = st.text_input(
         "Hail Table Path",
-        value="nirvana_variants.ht",
-        help="Path to your Nirvana Hail table"
+        value="variants.ht",
+        help="Path to your Hail table"
     )
     
-    if st.button("🔄 Load/Reload Data"):
+    if st.button("Load/Reload Data"):
         with st.spinner("Loading table..."):
             try:
                 # Clear cache
@@ -173,26 +173,26 @@ with st.sidebar:
                     st.code(traceback.format_exc())
     
     st.markdown("---")
-    st.markdown("### 📖 Quick Guide")
+    st.markdown("### Quick Guide")
     st.markdown("""
     **Search Options:**
     
     🔹 **Variant**
     - rsID: `rs123456`
-    - Position: `chr1:12345` or `chr1:12345:A:T`
+    - Position: `chr1:12345` or `chr1:69270:A:G`
     
     🔹 **Region**
     - Format: `chr1:1000000-2000000`
     
     🔹 **Gene**
-    - Symbol: `BRCA1`, `TP53`
+    - Symbol: `OR4F5`, `TP53`
     
     🔹 **Browse**
     - View random variants
     """)
 
 # Main content
-st.title("🧬 Nirvana Variant Browser")
+st.title("Variant Browser")
 
 if 'table_info' not in st.session_state:
     st.info("👈 Please load your Hail table using the sidebar")
@@ -247,7 +247,7 @@ else:  # Browse All
     )
     search_query = None
 
-search_button = st.button("🔎 Search", type="primary", use_container_width=False)
+search_button = st.button("🔎 Search", type="primary")
 
 # Execute search
 if search_button or search_type == "Browse All":
@@ -317,7 +317,7 @@ if search_button or search_type == "Browse All":
             
             # Convert to pandas
             df = filtered_ht.to_pandas()
-            
+            df = df.replace({pd.NA: np.nan})
             # Convert sets to strings for display
             if 'genes' in df.columns:
                 df['genes'] = df['genes'].apply(lambda x: ', '.join(sorted(x)) if x and len(x) > 0 else '')
@@ -325,6 +325,9 @@ if search_button or search_type == "Browse All":
                 df['all_consequences'] = df['all_consequences'].apply(
                     lambda x: ', '.join(sorted(x)) if x and len(x) > 0 else ''
                 )
+                
+            #df = df.fillna(value=np.nan)
+           
             
             if len(df) == 0:
                 st.warning(f"⚠️ No variants found for: {search_desc}")
@@ -497,8 +500,8 @@ if 'current_df' in st.session_state:
                         title="Allele Frequency Distribution (log scale)",
                         labels={'value': 'Allele Frequency', 'count': 'Count'}
                     )
-                    fig.update_xaxis(type="log")
-                    st.plotly_chart(fig, use_container_width=True)
+                    fig.update_xaxes(type="log")
+                    st.plotly_chart(fig, width='stretch')
             
             with col2:
                 # Frequency categories
@@ -515,14 +518,20 @@ if 'current_df' in st.session_state:
                     names=cat_counts.index,
                     title="Frequency Categories"
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             
             # gnomAD genome vs exome
             if 'gnomad_af' in df.columns and 'gnomad_exome_af' in df.columns:
                 comparison_df = df[
                     df['gnomad_af'].notna() & df['gnomad_exome_af'].notna()
                 ].copy()
+                comparison_df = comparison_df.fillna(np.nan) 
                 
+                comparison_df = comparison_df.replace({pd.NA: np.nan})
+                comparison_df = comparison_df.fillna(np.nan)
+                comparison_df = comparison_df.astype(object).where(pd.notna(comparison_df), None)
+
+
                 if len(comparison_df) > 0:
                     fig = px.scatter(
                         comparison_df,
@@ -533,13 +542,13 @@ if 'current_df' in st.session_state:
                         labels={'gnomad_af': 'Genome AF', 'gnomad_exome_af': 'Exome AF'},
                         opacity=0.6
                     )
-                    fig.update_xaxis(type="log")
-                    fig.update_yaxis(type="log")
+                    fig.update_xaxes(type="log")
+                    fig.update_yaxes(type="log")
                     fig.add_shape(
                         type="line", line=dict(dash="dash", color="gray"),
                         x0=0.00001, x1=1, y0=0.00001, y1=1
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
         else:
             st.info("No frequency data available")
     
@@ -563,7 +572,7 @@ if 'current_df' in st.session_state:
                 yaxis_title="Mean AF",
                 height=400
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             # Population comparison heatmap
             if len(df) > 1:
@@ -580,7 +589,7 @@ if 'current_df' in st.session_state:
                         zmin=-1,
                         zmax=1
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
         else:
             st.info("No population data available")
     
@@ -599,11 +608,18 @@ if 'current_df' in st.session_state:
                             nbins=50,
                             title=f"{col.replace('_', ' ').title()} Distribution"
                         )
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, width='stretch')
             
             # Conservation vs AF
             if 'phylop_score' in df.columns and 'max_gnomad_af' in df.columns:
                 plot_df = df[df['phylop_score'].notna() & df['max_gnomad_af'].notna()]
+                plot_df = plot_df.fillna(np.nan)
+                
+                plot_df = plot_df.replace({pd.NA: np.nan})
+                plot_df = plot_df.fillna(np.nan)
+                plot_df = plot_df.astype(object).where(pd.notna(plot_df), None)
+
+                
                 if len(plot_df) > 0:
                     fig = px.scatter(
                         plot_df,
@@ -613,8 +629,8 @@ if 'current_df' in st.session_state:
                         title="Conservation vs Allele Frequency",
                         opacity=0.5
                     )
-                    fig.update_xaxis(type="log")
-                    st.plotly_chart(fig, use_container_width=True)
+                    fig.update_xaxes(type="log")
+                    st.plotly_chart(fig, width='stretch')
         else:
             st.info("No conservation scores available")
     
@@ -658,19 +674,18 @@ if 'current_df' in st.session_state:
             
             st.dataframe(
                 df[selected_cols].style.format(format_dict, na_rep='—'),
-                use_container_width=True,
+                width='stretch',
                 height=500
             )
             
             # Download button
             csv = df[selected_cols].to_csv(index=False)
             st.download_button(
-                "📥 Download Results (CSV)",
-                data=csv,
-                file_name=f"nirvana_variants_{st.session_state.search_desc.replace(' ', '_').replace(':', '-')}.csv",
-                mime="text/csv",
-                use_container_width=False
-            )
+    "Download Results (CSV)",
+    data=csv,
+    file_name=f"_variants_{st.session_state.search_desc.replace(' ', '_').replace(':', '-')}.csv",
+    mime="text/csv"
+)
     
     # Tab 5: Annotations
     with tab5:
@@ -687,7 +702,7 @@ if 'current_df' in st.session_state:
                     labels={'x': 'Variant Type', 'y': 'Count'}
                 )
                 fig.update_layout(height=400)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("No 'variant_type' data available.")
         
@@ -707,7 +722,7 @@ if 'current_df' in st.session_state:
                         labels={'x': 'Significance', 'y': 'Count'}
                     )
                     fig.update_layout(height=400)
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                 else:
                     st.info("No ClinVar data to display.")
             else:
@@ -729,7 +744,7 @@ if 'current_df' in st.session_state:
                     labels={'x': 'Consequence', 'y': 'Count'}
                 )
                 fig.update_layout(height=450)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("No consequence data to display.")
         else:
