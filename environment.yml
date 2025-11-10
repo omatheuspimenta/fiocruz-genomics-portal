@@ -30,16 +30,16 @@ dependencies:
   - brotli-python=1.0.9=py311h6a678d5_9
   - bzip2=1.0.8=h5eee18b_6
   - c-ares=1.34.5=hb9d3cd8_0
-  - ca-certificates=2025.10.5=hbd8a1cb_0
+  - ca-certificates=2025.11.4=h06a4308_0
   - cachetools=6.2.1=pyhd8ed1ab_0
   - cairo=1.18.4=h44eff21_0
-  - certifi=2025.10.5=pyhd8ed1ab_0
+  - certifi=2025.10.5=py311h06a4308_0
   - charset-normalizer=3.4.4=pyhd8ed1ab_0
   - click=8.3.0=pyh707e725_0
+  - cloudpickle=3.1.1=py311h06a4308_0
   - comm=0.2.3=pyhe01879c_0
   - cyrus-sasl=2.1.28=h1110e0f_3
   - dav1d=1.2.1=hd590300_0
-  - debugpy=1.8.16=py311hbdd6827_0
   - exceptiongroup=1.3.0=pyhd8ed1ab_0
   - executing=2.2.1=pyhd8ed1ab_0
   - expat=2.7.1=h6a678d5_0
@@ -58,13 +58,10 @@ dependencies:
   - icu=73.1=h6a678d5_0
   - idna=3.11=pyhd8ed1ab_0
   - importlib-metadata=8.7.0=pyhe01879c_1
-  - ipykernel=7.0.1=pyha191276_0
-  - ipython=9.6.0=pyhfa0c392_0
   - ipython_pygments_lexers=1.1.1=pyhd8ed1ab_0
   - jedi=0.19.2=pyhd8ed1ab_1
   - jinja2=3.1.6=pyhd8ed1ab_0
   - jpeg=9e=h0b41bf4_3
-  - jsonschema=4.25.1=pyhe01879c_0
   - jsonschema-specifications=2025.9.1=pyhcf101f3_0
   - jupyter_client=8.6.3=pyhd8ed1ab_1
   - jupyter_core=5.9.1=pyhc90fa1f_0
@@ -124,14 +121,12 @@ dependencies:
   - ncurses=6.5=h7934f7d_0
   - nest-asyncio=1.6.0=pyhd8ed1ab_1
   - numexpr=2.11.0=py311hccd6f0b_1
-  - numpy-base=2.3.3=py311hf387b04_1
   - openblas=0.3.30=pthreads_h6ec200e_3
   - openjpeg=2.5.4=h4e0627c_1
   - openldap=2.6.10=he9288cc_1
   - openssl=3.5.4=h26f9b46_0
   - orc=2.2.0=h372e9aa_0
   - packaging=25.0=pyh29332c3_1
-  - pandas=2.3.3=py311h505adc9_0
   - parso=0.8.5=pyhcf101f3_0
   - pcre2=10.46=h1321c63_0
   - pexpect=4.9.0=pyhd8ed1ab_1
@@ -141,8 +136,7 @@ dependencies:
   - platformdirs=4.5.0=pyhcf101f3_0
   - postgresql=17.6=h051607f_0
   - prompt-toolkit=3.0.52=pyha770c72_0
-  - protobuf=5.29.3=py311he621ea3_0
-  - psutil=7.1.1=py311h49ec1c0_0
+  - prompt_toolkit=3.0.52=hd3eb1b0_1
   - pthread-stubs=0.3=h0ce48e5_1
   - ptyprocess=0.7.0=pyhd8ed1ab_1
   - pure_eval=0.2.3=pyhd8ed1ab_1
@@ -155,6 +149,7 @@ dependencies:
   - python-tzdata=2025.2=pyhd8ed1ab_0
   - python_abi=3.11=2_cp311
   - pytz=2025.2=pyhd8ed1ab_0
+  - pyxdg=0.28=py311h06a4308_0
   - pyyaml=6.0.3=py311h3778330_0
   - pyzmq=27.1.0=py311hcf8288c_0
   - re2=2024.07.02=hdb19cb5_0
@@ -163,10 +158,10 @@ dependencies:
   - requests=2.32.5=pyhd8ed1ab_0
   - rpds-py=0.28.0=py311h902ca64_1
   - s2n=1.5.25=h5ac9029_1
-  - setuptools=80.9.0=py311h06a4308_0
   - six=1.17.0=pyhe01879c_1
   - smmap=5.0.2=pyhd8ed1ab_0
   - snappy=1.2.1=h6a678d5_0
+  - spyder-kernels=3.0.5=py311he3bba80_0
   - sqlite=3.50.2=hb25bd0a_1
   - stack_data=0.6.3=pyhd8ed1ab_1
   - streamlit=1.51.0=pyhd8ed1ab_0
@@ -183,6 +178,7 @@ dependencies:
   - watchdog=6.0.0=py311h38be061_1
   - wcwidth=0.2.14=pyhd8ed1ab_0
   - wheel=0.45.1=py311h06a4308_0
+  - wurlitzer=3.1.1=py311h06a4308_0
   - xorg-libx11=1.8.12=h9b100fa_1
   - xorg-libxau=1.0.12=h9b100fa_0
   - xorg-libxdmcp=1.1.5=h9b100fa_0
@@ -199,65 +195,159 @@ dependencies:
   - pip:
       - aiodns==2.0.0
       - aiohappyeyeballs==2.6.1
-      - aiohttp==3.13.1
+      - aiohttp==3.13.2
       - aiosignal==1.4.0
+      - annotated-types==0.7.0
+      - annoy==1.17.3
+      - anyio==3.7.1
+      - argon2-cffi==25.1.0
+      - argon2-cffi-bindings==25.1.0
       - avro==1.11.5
       - azure-common==1.1.28
       - azure-core==1.36.0
       - azure-identity==1.25.1
       - azure-mgmt-core==1.6.0
       - azure-mgmt-storage==20.1.0
-      - azure-storage-blob==12.27.0
+      - azure-storage-blob==12.27.1
+      - babel==2.17.0
+      - beautifulsoup4==4.14.2
+      - biocommons-seqrepo==0.6.11
+      - bioutils==0.6.1
+      - bleach==6.3.0
       - bokeh==3.4.3
-      - boto3==1.40.58
-      - botocore==1.40.58
+      - boto3==1.40.64
+      - botocore==1.40.64
+      - canonicaljson==2.0.0
       - cffi==2.0.0
+      - coloredlogs==15.0.1
       - commonmark==0.9.1
+      - configparser==7.2.0
       - contourpy==1.3.3
       - cryptography==46.0.3
+      - debugpy==1.8.17
       - decorator==4.4.2
+      - defusedxml==0.7.1
       - deprecated==1.2.18
       - dill==0.4.0
+      - fastjsonschema==2.21.2
+      - flatbuffers==25.9.23
       - frozenlist==1.8.0
-      - google-auth==2.41.1
+      - ga4gh-vrs==0.8.4
+      - gnomad==0.8.2
+      - gnomad-toolbox==0.0.1
+      - google-auth==2.42.1
       - google-auth-oauthlib==0.8.0
       - hail==0.2.136
+      - hdbscan==0.8.40
+      - hgvs==1.5.6
+      - humanfriendly==10.0
       - humanize==4.14.0
+      - ijson==3.3.0
+      - importlib-resources==6.5.2
+      - inflection==0.5.1
+      - ipykernel==7.1.0
+      - ipython==8.37.0
+      - ipython-genutils==0.2.0
+      - ipywidgets==8.1.7
       - isodate==0.7.2
       - janus==1.0.0
       - jmespath==1.0.1
+      - joblib==1.5.2
       - jproperties==2.1.2
+      - json5==0.12.1
+      - jsonschema==3.2.0
+      - jupyter==1.1.1
+      - jupyter-console==6.6.3
+      - jupyter-contrib-core==0.4.2
+      - jupyter-contrib-nbextensions==0.7.0
+      - jupyter-highlight-selected-word==0.2.0
+      - jupyter-nbextensions-configurator==0.6.4
+      - jupyter-server==1.24.0
+      - jupyterlab==3.5.3
+      - jupyterlab-pygments==0.3.0
+      - jupyterlab-server==2.16.6
+      - jupyterlab-widgets==3.0.15
+      - lxml==6.0.2
+      - markdown==3.9
+      - mistune==3.1.4
+      - ml-dtypes==0.5.3
+      - mpmath==1.3.0
       - msal==1.34.0
       - msal-extensions==1.3.1
       - msrest==0.7.1
       - multidict==6.7.0
+      - nbclassic==1.3.3
+      - nbclient==0.10.2
+      - nbconvert==7.16.6
+      - nbformat==5.10.4
+      - networkx==3.5
+      - nodejs==0.1.1
+      - notebook==6.5.4
+      - notebook-shim==0.2.4
+      - npm==0.1.1
       - numpy==2.3.4
       - oauthlib==3.3.1
+      - onnx==1.19.1
+      - onnxruntime==1.23.2
+      - optional-django==0.1.0
       - orjson==3.11.4
+      - pandas==2.2.3
+      - pandocfilters==1.5.1
       - parsimonious==0.10.0
+      - parsley==1.3
+      - patsy==1.0.2
       - pillow==12.0.0
       - plotly==5.24.1
+      - prometheus-client==0.23.1
       - propcache==0.4.1
+      - protobuf==6.33.0
+      - psutil==7.1.2
+      - psycopg2==2.9.11
+      - psycopg2-binary==2.9.11
       - py4j==0.10.9.7
       - pyasn1==0.6.1
       - pyasn1-modules==0.4.2
       - pycares==4.11.0
       - pycparser==2.23
+      - pydantic==2.10.5
+      - pydantic-core==2.27.2
       - pyjwt==2.10.1
+      - pyrsistent==0.20.0
+      - pysam==0.23.3
       - pyspark==3.5.7
       - python-json-logger==2.0.7
+      - python-jsonschema-objects==0.4.6
       - regex==2025.10.23
       - requests-oauthlib==2.0.0
       - rich==12.6.0
       - rsa==4.9.1
       - s3transfer==0.14.0
-      - scipy==1.16.2
+      - scikit-learn==1.7.2
+      - scipy==1.16.3
+      - send2trash==1.8.3
+      - setuptools==80.9.0
       - shellingham==1.5.4
+      - skl2onnx==1.19.1
+      - slackclient==2.5.0
+      - sniffio==1.3.1
       - sortedcontainers==2.4.0
+      - soupsieve==2.8
+      - sqlparse==0.5.3
+      - statsmodels==0.14.5
+      - sympy==1.14.0
       - tabulate==0.9.0
+      - terminado==0.18.1
+      - threadpoolctl==3.6.0
+      - tinycss2==1.4.0
+      - tomli==2.3.0
+      - tqdm==4.67.1
       - typer==0.20.0
       - uvloop==0.22.1
+      - webencodings==0.5.1
+      - websocket-client==1.9.0
+      - widgetsnbextension==4.0.14
       - wrapt==1.17.3
-      - xyzservices==2025.4.0
+      - xyzservices==2025.10.0
       - yarl==1.22.0
+      - yoyo-migrations==9.0.0
 prefix: /home/matheus/anaconda3/envs/gnomad-toolbox
