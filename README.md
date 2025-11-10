@@ -13,3 +13,13 @@ To run the app, use the command:
 streamlit run code/app.py
 ```
 
+Troubleshooting
+
+In cases of Java heap memory error, export the following environment variables:
+
+```bash
+export SPARK_EXECUTOR_MEMORY=16G
+export SPARK_DRIVER_MEMORY=16G
+```
+
+Change “16G” to the desired value.
