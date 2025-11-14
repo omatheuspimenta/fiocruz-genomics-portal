@@ -777,9 +777,9 @@ if __name__ == "__main__":
         log_dir = Path(log_dir_path)
         log_dir.mkdir(parents=True, exist_ok=True)
         log_dir = log_dir / "hail.log"
-    #print the complete path of the log directory in str format
+    # print the complete path of the log directory in str format
     print(f"Hail log directory: {str(log_dir)}")
-    
+
     # check if output path directory exists, if not, create it
     output_dir = Path(args.output_path)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -787,7 +787,9 @@ if __name__ == "__main__":
     output_dir_str = str(output_dir)
     print("Initializing Hail...")
     hl.init(
-        app_name="Parse Illumina JSON", log=str(log_dir), default_reference=args.genome_ref
+        app_name="Parse Illumina JSON",
+        log=str(log_dir),
+        default_reference=args.genome_ref,
     )
 
     # print("Spark master:", hl.default_reference().name)
@@ -805,5 +807,7 @@ if __name__ == "__main__":
         max_positions=args.max_positions,  # Use None for all data
         batch_size=args.batch_size,  # Adjust based on available memory
     )
-    
-    print("Done!\nIf you wish to explore the generated Hail Table, you can use the 'test_table.ipynb' notebook.")
+
+    print(
+        "Done!\nIf you wish to explore the generated Hail Table, you can use the 'test_table.ipynb' notebook."
+    )
