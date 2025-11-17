@@ -1,2 +1,4 @@
 logs/*
+code/*.log
+code/.ipynb_checkpoints*
 data/*
