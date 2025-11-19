@@ -67,6 +67,7 @@ HAIL_SCHEMA = {
     "topmed_hc": hl.tint32,
     "topmed_failed_filter": hl.tbool,
     # ClinVar
+    "clinvar_variant_type": hl.tstr,
     "clinvar_significance": hl.tstr,
     "clinvar_id": hl.tstr,
     # Transcript count
@@ -427,6 +428,7 @@ def variant_to_dict(
         "topmed_hc": None,
         "topmed_failed_filter": None,
         # Initialize ClinVar fields
+        "clinvar_variant_type": None,
         "clinvar_significance": None,
         "clinvar_id": None,
         # Initialize transcript fields
@@ -437,9 +439,12 @@ def variant_to_dict(
 
     # Extract dbSNP
     dbsnp = variant_dict.get("dbsnp", {})
+    rsids = []
     if dbsnp and isinstance(dbsnp, dict):
         rsids = dbsnp.get("ids", [])
-        record["rsid"] = rsids[0] if rsids else None
+    elif dbsnp and isinstance(dbsnp, list):
+        rsids.extend(dbsnp)
+    record["rsid"] = ','.join(rsids) if rsids else None
 
     # Extract gnomAD genome
     gnomad = variant_dict.get("gnomad", {})
@@ -477,42 +482,50 @@ def variant_to_dict(
         record["topmed_failed_filter"] = topmed.get("failedFilter")
 
     # Extract ClinVar
-    clinvar = variant_dict.get("clinvar", {})
+    clinvar = variant_dict.get("clinvar-preview", {})
     if clinvar:
         if isinstance(clinvar, dict):
-            record["clinvar_significance"] = (
-                ";".join(clinvar["significance"])
-                if isinstance(clinvar.get("significance"), list)
-                else clinvar.get("significance")
-            )
-            record["clinvar_id"] = (
-                ";".join(map(str, clinvar["id"]))
-                if isinstance(clinvar.get("id"), list)
-                else str(clinvar.get("id"))
-                if clinvar.get("id")
-                else None
-            )
+            # Extract variantType
+            record["clinvar_variant_type"] = clinvar.get("variantType")
+            
+            # Extract classification from germlineClassification
+            classifications = clinvar.get("classifications", {}).get("germlineClassification", {})
+            record["clinvar_significance"] = classifications.get("classification")
+            
+            # Extract accession and version
+            accession = clinvar.get("accession")
+            version = clinvar.get("version")
+            record["clinvar_id"] = f"{accession}.{version}" if accession and version else accession
+            
         elif isinstance(clinvar, list):
-            record["clinvar_significance"] = (
-                ";".join(
-                    ";".join(map(str, c.get("significance", [])))
-                    if isinstance(c.get("significance"), list)
-                    else str(c.get("significance", ""))
-                    for c in clinvar
-                    if isinstance(c, dict)
-                )
-                or None
-            )
-            record["clinvar_id"] = (
-                ";".join(
-                    ";".join(map(str, c.get("id", [])))
-                    if isinstance(c.get("id"), list)
-                    else str(c.get("id", ""))
-                    for c in clinvar
-                    if isinstance(c, dict)
-                )
-                or None
-            )
+            # Collect variantTypes
+            variant_types = [
+                str(vt) for c in clinvar 
+                if isinstance(c, dict) and (vt := c.get("variantType")) is not None
+            ]
+            record["clinvar_variant_type"] = ";".join(variant_types) if variant_types else None
+            
+            # Collect classifications
+            classifications = []
+            for c in clinvar:
+                if isinstance(c, dict):
+                    germline_class = c.get("classifications", {}).get("germlineClassification", {})
+                    classification = germline_class.get("classification")
+                    if classification:
+                        classifications.append(classification)
+            record["clinvar_significance"] = ";".join(classifications) if classifications else None
+            
+            # Collect accessions
+            accessions = []
+            for c in clinvar:
+                if isinstance(c, dict):
+                    accession = c.get("accession")
+                    version = c.get("version")
+                    if accession and version:
+                        accessions.append(f"{accession}.{version}")
+                    elif accession:
+                        accessions.append(accession)
+            record["clinvar_id"] = ";".join(accessions) if accessions else None
 
     # Include transcripts
     if include_transcripts and variant.transcripts:
