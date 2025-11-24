@@ -13,7 +13,7 @@ The easiest way to run the entire application (Database, Backend, and Frontend) 
 ### Steps
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/omatheuspimenta/fiocruz-genomics-portal
    cd fiocruz-genomics-portal
    ```
 
@@ -70,7 +70,7 @@ sudo sysctl -p
 Clone the repository and navigate to the project folder.
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/omatheuspimenta/fiocruz-genomics-portal
 cd fiocruz-genomics-portal
 ```
 
