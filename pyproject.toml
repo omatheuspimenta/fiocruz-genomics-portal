@@ -1,0 +1,19 @@
+[project]
+name = "fiocruz-genomics-portal"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "elasticsearch[async]>=7.8.0,<8.0.0",
+    "fastapi[standard]>=0.121.2",
+    "pydantic-settings>=2.12.0",
+    "python-dotenv>=1.2.1",
+    "slowapi>=0.1.9",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.1",
+]

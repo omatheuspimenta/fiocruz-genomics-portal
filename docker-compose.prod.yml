@@ -1,0 +1,67 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: fiocruz_elasticsearch_prod
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      # Heap Size: 30GB is the "sweet spot" for Compressed Oops.
+      - ES_JAVA_OPTS=-Xms30g -Xmx30g
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data_prod:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - fiocruz_network
+
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: fiocruz_app_prod
+    # Command is defined in Dockerfile (gunicorn with conf), but we can override or ensure it here.
+    # We'll rely on the Dockerfile CMD which uses gunicorn_conf.py
+    expose:
+      - "8000"
+    environment:
+      # Mapped from .env
+      - PROJECT_NAME=${PROJECT_NAME}
+      - ES_INDEX=${ES_INDEX}
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - fiocruz_network
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    container_name: fiocruz_nginx_prod
+    ports:
+      - "80:80"
+      # - "443:443" # Uncomment if SSL is configured
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - fiocruz_network
+
+volumes:
+  es_data_prod:
+
+networks:
+  fiocruz_network:
+    driver: bridge
