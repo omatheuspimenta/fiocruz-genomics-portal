@@ -35,10 +35,10 @@ const SearchHero = ({ onSearch, loading }) => {
                             className="flex-1 px-6 py-4 outline-none text-lg text-slate-700 placeholder-slate-300"
                             placeholder={
                             searchType === "gene"
-                                ? "Enter a gene name (e.g., BRCA1)"
+                                ? "Enter a gene name (e.g., TP53)"
                                 : searchType === "variant"
-                                ? "Enter a variant (e.g., 1:55516888-G-A or rs1060915)"
-                                : "Enter a genomic region: chr:start-end (e.g., 17:430000-431000)"
+                                ? "Enter a variant (e.g., 17:7670699-C-A or rs121912664)"
+                                : "Enter a genomic region: chr:start-end (e.g., 17:7670000-7671000)"
                             }
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
