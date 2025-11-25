@@ -60,7 +60,8 @@ function App() {
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                                 <StatCard title="Total Variants" value={stats.count.toLocaleString()} icon="layers" />
                                 <StatCard title="Variant Types" value={stats.uniqueTypes} icon="git-branch" />
-                                <StatCard title="Mean AF" value={stats.meanAF.toExponential(1)} icon="activity" subtext="Global gnomAD" />
+                                {/* <StatCard title="Mean AF" value={stats.meanAF.toExponential(1)} icon="activity" subtext="Global gnomAD" /> */ }
+                                <StatCard title="Mean AF" value={stats.meanAF.toFixed(4)} icon="activity" subtext="Global gnomAD" />
                                 <StatCard title="Max AF" value={stats.maxAF.toFixed(3)} icon="trending-up" />
                                 <StatCard title="ClinVar" value={stats.clinvarCount} icon="clipboard-check" color="text-purple-600" />
                                 <StatCard title="Coverage" value={stats.coverage} icon="pie-chart" color="text-slate-600" />

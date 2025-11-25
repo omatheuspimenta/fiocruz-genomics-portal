@@ -2,35 +2,62 @@ from fastapi import APIRouter, HTTPException, Request
 from app.db.elasticsearch import get_es_client
 from app.core.config import settings
 from app.schemas.variant import VariantDetail
+from app.utils.clinvar import clinvar_transform
 import re
 
 router = APIRouter()
 
 def validate_variant_id(variant_id: str) -> bool:
-    """Validate variant ID format (chr-pos-ref-alt)"""
-    pattern = r'^([0-9]{1,2}|X|Y|MT?)-\d+-[ACGT]+-[ACGT]+$'
-    return bool(re.match(pattern, variant_id, re.IGNORECASE))
+    """Validate variant ID format (chr-pos-ref-alt, rsid, or chr:start-end)"""
+    # RSID format
+    if variant_id.lower().startswith('rs'):
+        return True
+    
+    # Standard format: CHR-POS-REF-ALT
+    standard_pattern = r'^([0-9]{1,2}|X|Y|MT?)-\d+-[ACGT]+-[ACGT]+$'
+    if re.match(standard_pattern, variant_id, re.IGNORECASE):
+        return True
+
+    # New format: CHR:POS-REF-ALT
+    colon_pattern = r'^([0-9]{1,2}|X|Y|MT?):\d+-[ACGT]+-[ACGT]+$'
+    if re.match(colon_pattern, variant_id, re.IGNORECASE):
+        return True
+        
+    # Region format: CHR:START-END
+    region_pattern = r'^([0-9]{1,2}|X|Y|MT?):\d+-\d+$'
+    if re.match(region_pattern, variant_id, re.IGNORECASE):
+        return True
+        
+    return False
 
 @router.get("/{variant_id}", response_model=VariantDetail)
 async def get_variant(variant_id: str):
     """
     Get detailed information about a specific variant.
+    Supports:
+    - Standard ID: CHR-POS-REF-ALT
+    - RSID: rs12345
+    - Region-like ID: CHR:START-END (searches for exact match on vid or location)
     """
     if not validate_variant_id(variant_id):
         raise HTTPException(
             status_code=400,
-            detail="Invalid variant ID format. Expected: CHR-POS-REF-ALT"
+            detail="Invalid variant ID format. Expected: CHR-POS-REF-ALT, rs..., or CHR:START-END"
         )
     
     try:
-        # Normalize variant ID to uppercase (handles case-insensitivity for REF/ALT/CHR)
-        variant_id = variant_id.upper()
-        
         es = await get_es_client()
-        query = {
-            "query": {"term": {"vid.keyword": variant_id}},
-            "size": 1
-        }
+        query = {"size": 1}
+        # Handle RSID search
+        if variant_id.lower().startswith('rs'):
+            query["query"] = {"term": {"rsid.keyword": variant_id.lower()}}
+        else:
+            # Normalize variant ID to uppercase (handles case-insensitivity for REF/ALT/CHR)
+            variant_id = variant_id.upper()
+            # Handle CHR:POS-REF-ALT format by converting to CHR-POS-REF-ALT
+            if ':' in variant_id and '-' in variant_id:
+                variant_id = variant_id.replace(':', '-')
+            query["query"] = {"term": {"vid.keyword": variant_id}}
         
         response = await es.search(index=settings.ES_INDEX, body=query)
         hits = response['hits']['hits']
@@ -54,7 +81,7 @@ async def get_variant(variant_id: str):
                 "rsid": variant.get('rsid'),
                 "gnomad_af": variant.get('gnomad_af'),
                 "max_pop_af": variant.get('max_pop_af'),
-                "clinvar_significance": variant.get('clinvar_significance'),
+                "clinvar_significance": clinvar_transform(variant.get('clinvar_significance')),
                 "clinvar_variant_type": variant.get('clinvar_variant_type'),
                 "clinvar_id": variant.get('clinvar_id'),
                 "gene": variant.get('genes') if variant.get('genes') else [],

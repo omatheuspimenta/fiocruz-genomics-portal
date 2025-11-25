@@ -9,9 +9,7 @@ const Header = () => {
             <div className="max-w-7xl mx-auto px-4 py-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        
-                        {/* Use the new component here */}
-                        {/* 'text-white' ensures the logo is white */}
+
                         <IconLogo className="h-12 w-auto text-white" />
                         
                         <div className="h-8 w-px bg-slate-700 mx-1 hidden sm:block"></div>

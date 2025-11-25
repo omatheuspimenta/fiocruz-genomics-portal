@@ -11,8 +11,6 @@ export const searchVariants = async (type, query, page = 1) => {
     const cleanQuery = query.trim();
 
     if (type === 'variant') {
-        // Direct variant lookup is handled slightly differently in the original app, 
-        // but we can standardize the interface here.
         return fetchVariant(cleanQuery);
     } else if (type === 'gene') {
         endpoint = `/gene/${cleanQuery}?page=${page}`;

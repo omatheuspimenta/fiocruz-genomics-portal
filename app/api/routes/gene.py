@@ -47,7 +47,15 @@ async def get_gene(
         
         response = await es.search(index=settings.ES_INDEX, body=query)
         total = response['hits']['total']['value']
-        variants = [hit['_source'] for hit in response['hits']['hits']]
+        variants = []
+        from app.utils.clinvar import clinvar_transform
+        
+        for hit in response['hits']['hits']:
+            variant = hit['_source']
+            # Apply ClinVar transformation
+            if 'clinvar_significance' in variant:
+                variant['clinvar_significance'] = clinvar_transform(variant['clinvar_significance'])
+            variants.append(variant)
         
         # Get aggregations for statistics
         agg_query = {
