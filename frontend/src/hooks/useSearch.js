@@ -22,19 +22,51 @@ export const useSearch = () => {
         minAF: 0, maxAF: 1, consequence: '', variantType: '', clinvar: '', rsid: '', gene: ''
     });
 
-    const handleSearch = async (type, query) => {
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalVariants, setTotalVariants] = useState(0);
+    const [currentSearchType, setCurrentSearchType] = useState(null);
+    const [currentQuery, setCurrentQuery] = useState('');
+
+    const handleSearch = async (type, query, page = 1) => {
         setLoading(true);
         setError(null);
-        setRawData(null);
-        setFilteredVariants([]);
+        // Don't clear data immediately to avoid flash if just changing page
+        if (type !== currentSearchType || query !== currentQuery) {
+            setRawData(null);
+            setFilteredVariants([]);
+            setCurrentPage(1);
+        } else {
+            setCurrentPage(page);
+        }
+
+        setCurrentSearchType(type);
+        setCurrentQuery(query);
 
         try {
-            const result = await searchVariants(type, query);
+            const result = await searchVariants(type, query, page);
             setRawData(result);
+
+            // Update pagination info from response
+            if (result.total_pages) setTotalPages(result.total_pages);
+            else setTotalPages(1);
+
+            if (result.total_variants) setTotalVariants(result.total_variants);
+            else setTotalVariants(result.variants ? result.variants.length : (result.variant ? 1 : 0));
+
         } catch (err) {
             setError(err.message);
+            setRawData(null);
+            setFilteredVariants([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const changePage = (page) => {
+        if (currentSearchType && currentQuery) {
+            handleSearch(currentSearchType, currentQuery, page);
         }
     };
 
@@ -60,7 +92,6 @@ export const useSearch = () => {
             if (filters.variantType && !vType.includes(filters.variantType.toLowerCase())) return false;
             if (filters.clinvar && !clinvarSig.includes(filters.clinvar.toLowerCase())) return false;
             if (filters.rsid && !rsidVal.includes(filters.rsid.toLowerCase())) return false;
-            if (filters.rsid && !rsidVal.includes(filters.rsid.toLowerCase())) return false;
 
             // Handle gene filtering (check both gene string and genes array)
             if (filters.gene) {
@@ -78,6 +109,12 @@ export const useSearch = () => {
     }, [rawData, filters]);
 
     const stats = useMemo(() => {
+        // If we have server-side statistics (Global Stats), use them directly
+        if (rawData && rawData.statistics) {
+            return rawData.statistics;
+        }
+
+        // Fallback to client-side calculation (e.g. for single variant search or legacy)
         if (!filteredVariants || filteredVariants.length === 0) return null;
 
         const afs = filteredVariants.map(v => v.gnomad_af).filter(n => typeof n === 'number');
@@ -122,8 +159,15 @@ export const useSearch = () => {
         });
 
         let coverage = "100%";
-        if (rawData && rawData.total_variants && rawData.total_variants > 0) {
-            const percent = (filteredVariants.length / rawData.total_variants) * 100;
+        // Use totalVariants from state if available, otherwise fallback
+        const total = totalVariants || (rawData && rawData.total_variants) || 0;
+
+        if (total > 0) {
+            // Note: This coverage calculation might be misleading with pagination 
+            // as filteredVariants is only for the current page. 
+            // Ideally we'd want total filtered count from backend.
+            // For now, let's just show percentage of current page vs total found.
+            const percent = (filteredVariants.length / total) * 100;
             coverage = `${percent.toFixed(1)}%`;
         }
 
@@ -132,7 +176,7 @@ export const useSearch = () => {
             uniqueTypes: new Set(filteredVariants.map(v => v.variant_type)).size,
             meanAF, maxAF, clinvarCount, pieData, popData, scatterData, variantTypeData, qualityDist, conservationData, coverage
         };
-    }, [filteredVariants, rawData]);
+    }, [filteredVariants, rawData, totalVariants]);
 
     return {
         rawData,
@@ -142,6 +186,11 @@ export const useSearch = () => {
         filters,
         setFilters,
         handleSearch,
-        stats
+        stats,
+        // Pagination exports
+        currentPage,
+        totalPages,
+        totalVariants,
+        changePage
     };
 };

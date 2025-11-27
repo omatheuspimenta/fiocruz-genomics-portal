@@ -48,30 +48,23 @@ async def get_gene(
         response = await es.search(index=settings.ES_INDEX, body=query)
         total = response['hits']['total']['value']
         variants = []
-        from app.utils.clinvar import clinvar_transform
-        
         for hit in response['hits']['hits']:
             variant = hit['_source']
             # Apply ClinVar transformation
-            if 'clinvar_significance' in variant:
-                variant['clinvar_significance'] = clinvar_transform(variant['clinvar_significance'])
+            # if 'clinvar_significance' in variant:
+            #     variant['clinvar_significance'] = clinvar_transform(variant['clinvar_significance'])
             variants.append(variant)
         
-        # Get aggregations for statistics
-        agg_query = {
-            "query": {"bool": {"must": must_conditions}},
-            "size": 0,
-            "aggs": {
-                "consequence_counts": {
-                    "terms": {"field": "all_consequences.keyword", "size": 20}
-                },
-                "impact_counts": {
-                    "terms": {"field": "canonical_transcript.impact.keyword"}
-                }
-            }
-        }
+        # Get aggregations for statistics (GLOBAL scope)
+        from app.utils.stats import get_global_stats_query, format_stats_response
         
-        agg_response = await es.search(index=settings.ES_INDEX, body=agg_query)
+        # We need a separate query for stats because we want stats for ALL variants matching the filters,
+        # not just the paginated ones.
+        # The 'query' part is the same as the main query.
+        stats_query = get_global_stats_query(query["query"])
+        
+        agg_response = await es.search(index=settings.ES_INDEX, body=stats_query)
+        statistics = format_stats_response(agg_response, total)
         
         return {
             "gene": gene_name,
@@ -80,16 +73,7 @@ async def get_gene(
             "page_size": page_size,
             "total_pages": (total + page_size - 1) // page_size,
             "variants": variants,
-            "statistics": {
-                "consequences": {
-                    bucket['key']: bucket['doc_count']
-                    for bucket in agg_response['aggregations']['consequence_counts']['buckets']
-                },
-                "impacts": {
-                    bucket['key']: bucket['doc_count']
-                    for bucket in agg_response['aggregations']['impact_counts']['buckets']
-                }
-            }
+            "statistics": statistics
         }
         
     except Exception as e:

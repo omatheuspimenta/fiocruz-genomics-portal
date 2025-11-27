@@ -70,6 +70,13 @@ async def get_region(
         total = response['hits']['total']['value']
         variants = [hit['_source'] for hit in response['hits']['hits']]
         
+        # Get aggregations for statistics (GLOBAL scope)
+        from app.utils.stats import get_global_stats_query, format_stats_response
+        
+        stats_query = get_global_stats_query(query["query"])
+        agg_response = await es.search(index=settings.ES_INDEX, body=stats_query)
+        statistics = format_stats_response(agg_response, total)
+        
         return {
             "region": region,
             "chromosome": chrom,
@@ -78,7 +85,9 @@ async def get_region(
             "total_variants": total,
             "page": page,
             "page_size": page_size,
-            "variants": variants
+            "total_pages": (total + page_size - 1) // page_size,
+            "variants": variants,
+            "statistics": statistics
         }
         
     except Exception as e:

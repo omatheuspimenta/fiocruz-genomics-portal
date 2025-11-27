@@ -1,22 +1,13 @@
 import React from 'react';
 import Badge from './Badge';
 
-const VariantTable = ({ variants, onVariantClick }) => {
-    const [currentPage, setCurrentPage] = React.useState(1);
-    const itemsPerPage = 100;
 
-    // Reset to first page when variants change
-    React.useEffect(() => {
-        setCurrentPage(1);
-    }, [variants]);
-
-    const totalPages = Math.ceil(variants.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const currentVariants = variants.slice(startIndex, startIndex + itemsPerPage);
+const VariantTable = ({ variants, onVariantClick, currentPage = 1, totalPages = 1, onPageChange, totalVariants }) => {
+    // Internal pagination removed in favor of server-side pagination
 
     const handlePageChange = (newPage) => {
-        if (newPage >= 1 && newPage <= totalPages) {
-            setCurrentPage(newPage);
+        if (newPage >= 1 && newPage <= totalPages && onPageChange) {
+            onPageChange(newPage);
         }
     };
 
@@ -32,7 +23,7 @@ const VariantTable = ({ variants, onVariantClick }) => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-200">
-                        {currentVariants.map((v, idx) => (
+                        {variants.map((v, idx) => (
                             <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium">
                                     <button
@@ -66,10 +57,11 @@ const VariantTable = ({ variants, onVariantClick }) => {
                 </table>
             </div>
 
-            {variants.length > itemsPerPage && (
+            {totalPages > 1 && (
                 <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-lg shadow-sm">
                     <div className="text-sm text-slate-600">
-                        Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(startIndex + itemsPerPage, variants.length)}</span> of <span className="font-medium">{variants.length}</span> results
+                        Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span>
+                        {totalVariants > 0 && <span> ({totalVariants} total variants)</span>}
                     </div>
                     <div className="flex items-center gap-2">
                         <button

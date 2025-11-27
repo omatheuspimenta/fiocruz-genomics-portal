@@ -15,7 +15,8 @@ import { useSearch } from './hooks/useSearch';
 function App() {
     const {
         rawData, filteredVariants, loading, error,
-        filters, setFilters, handleSearch, stats
+        filters, setFilters, handleSearch, stats,
+        currentPage, totalPages, changePage, totalVariants
     } = useSearch();
 
     const [activeTab, setActiveTab] = useState('frequency');
@@ -60,7 +61,7 @@ function App() {
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                                 <StatCard title="Total Variants" value={stats.count.toLocaleString()} icon="layers" />
                                 <StatCard title="Variant Types" value={stats.uniqueTypes} icon="git-branch" />
-                                {/* <StatCard title="Mean AF" value={stats.meanAF.toExponential(1)} icon="activity" subtext="Global gnomAD" /> */ }
+                                {/* <StatCard title="Mean AF" value={stats.meanAF.toExponential(1)} icon="activity" subtext="Global gnomAD" /> */}
                                 <StatCard title="Mean AF" value={stats.meanAF.toFixed(4)} icon="activity" subtext="Global gnomAD" />
                                 <StatCard title="Max AF" value={stats.maxAF.toFixed(3)} icon="trending-up" />
                                 <StatCard title="ClinVar" value={stats.clinvarCount} icon="clipboard-check" color="text-purple-600" />
@@ -234,6 +235,10 @@ function App() {
                                                     <VariantTable
                                                         variants={filteredVariants}
                                                         onVariantClick={(vid) => handleSearch('variant', vid)}
+                                                        currentPage={currentPage}
+                                                        totalPages={totalPages}
+                                                        onPageChange={changePage}
+                                                        totalVariants={totalVariants}
                                                     />
                                                     <div className="mt-4 text-right text-xs text-slate-400">
                                                         Showing {filteredVariants.length} variants

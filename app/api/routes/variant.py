@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.db.elasticsearch import get_es_client
 from app.core.config import settings
 from app.schemas.variant import VariantDetail
-from app.utils.clinvar import clinvar_transform
+# from app.utils.clinvar import clinvar_transform
 import re
 
 router = APIRouter()
@@ -81,7 +81,8 @@ async def get_variant(variant_id: str):
                 "rsid": variant.get('rsid'),
                 "gnomad_af": variant.get('gnomad_af'),
                 "max_pop_af": variant.get('max_pop_af'),
-                "clinvar_significance": clinvar_transform(variant.get('clinvar_significance')),
+                # "clinvar_significance": clinvar_transform(variant.get('clinvar_significance')),
+                "clinvar_significance": variant.get('clinvar_significance'),
                 "clinvar_variant_type": variant.get('clinvar_variant_type'),
                 "clinvar_id": variant.get('clinvar_id'),
                 "gene": variant.get('genes') if variant.get('genes') else [],
