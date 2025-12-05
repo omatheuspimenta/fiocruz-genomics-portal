@@ -53,6 +53,7 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 reproduce_issue*.py
+data/variants.exo.1010
 
 # Logs
 *.log
