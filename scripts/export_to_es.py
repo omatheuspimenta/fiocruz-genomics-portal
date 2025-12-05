@@ -50,7 +50,7 @@ def export_table(input_path: str, host: str, port: int, index: str) -> None:
         port=port,
         index=index,
         index_type='_doc',
-        block_size=10000,
+        block_size=2500,
         config={
             "es.nodes.wan.only": "true"
         }
