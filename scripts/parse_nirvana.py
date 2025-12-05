@@ -741,7 +741,7 @@ def convert_to_hail(
     json_file: str,
     output_path: str,
     max_positions: Optional[int] = None,
-    batch_size: int = 10000,
+    batch_size: int = 2500,
     temp_dir: Optional[str] = None,
 ) -> hl.Table:
     """
@@ -944,7 +944,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=5000,
+        default=2500,
         help="Number of variants per batch (default: 10000)",
     )
     parser.add_argument(
