@@ -505,35 +505,35 @@ class Parser:
 
         return positions
 
-    def filter_transcripts_by_consequence(
-        self, include: Optional[List[str]] = None, exclude: Optional[List[str]] = None
-    ) -> Generator[Any, Any, None]:
-        """
-        Filter transcripts based on consequence terms.
+    # def filter_transcripts_by_consequence(
+    #     self, include: Optional[List[str]] = None, exclude: Optional[List[str]] = None
+    # ) -> Generator[Any, Any, None]:
+    #     """
+    #     Filter transcripts based on consequence terms.
 
-        Args:
-            include (List[str], optional): List of consequences to include.
-            exclude (List[str], optional): List of consequences to exclude.
+    #     Args:
+    #         include (List[str], optional): List of consequences to include.
+    #         exclude (List[str], optional): List of consequences to exclude.
 
-        Returns:
-            Generator: Filtered positions.
-        """
-        if not exclude:
-            exclude = []
+    #     Returns:
+    #         Generator: Filtered positions.
+    #     """
+    #     if not exclude:
+    #         exclude = []
 
-        if not include:
-            include = []
+    #     if not include:
+    #         include = []
 
-        positions = (
-            Position.model_validate(position)
-            for position in self.annotated_data.positions
-            for variant in position.get("variants", {})
-            for transcript in variant.get("transcripts", [])
-            for consequence in transcript.get("consequence", [])
-            if (not bool(include) or consequence in include)
-            and consequence not in exclude
-        )
-        return positions
+    #     positions = (
+    #         Position.model_validate(position)
+    #         for position in self.annotated_data.positions
+    #         for variant in position.get("variants", {})
+    #         for transcript in variant.get("transcripts", [])
+    #         for consequence in transcript.get("consequence", [])
+    #         if (not bool(include) or consequence in include)
+    #         and consequence not in exclude
+    #     )
+    #     return positions
 
 
 def variant_to_dict(

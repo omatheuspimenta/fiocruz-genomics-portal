@@ -15,8 +15,8 @@ const Header = () => {
                         <div className="h-8 w-px bg-slate-700 mx-1 hidden sm:block"></div>
 
                         <div>
-                            <h1 className="text-xl font-bold tracking-tight leading-none">Fiocruz Browser</h1>
-                            <p className="text-xs text-slate-400 mt-1 font-light tracking-wide uppercase">Genomic Analytics Platform</p>
+                            <h1 className="text-xl font-bold tracking-tight leading-none">aPRoVAR</h1>
+                            <p className="text-xs text-slate-400 mt-1 font-light tracking-wide uppercase">Arquivo Paranaense Online de Variantes Genéticas</p>
                         </div>
                     </div>
                     <div className="hidden md:flex items-center gap-4 text-sm text-slate-400">

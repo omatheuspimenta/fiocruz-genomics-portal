@@ -43,7 +43,7 @@ const VariantTable = ({ variants, onVariantClick, currentPage = 1, totalPages = 
                                     <Badge type="type">{v.variant_type}</Badge>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-slate-700 max-w-xs truncate" title={(v.all_consequences || []).join(', ')}>
-                                    {(v.all_consequences || []).slice(0, 1).join('').replace(/_/g, ' ')}
+                                    {(v.all_consequences || []).slice(0, 1).join('').replace(/_/g, ' ').replace(/3 prime/g, "3'")}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">
                                     {v.gnomad_af ? Number(v.gnomad_af).toFixed(4) : <span className="text-slate-300">-</span>}

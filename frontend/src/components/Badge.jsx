@@ -17,6 +17,8 @@ const Badge = ({ children, type = 'default' }) => {
         if (text.includes('pathogenic')) style = styles.danger;
         else if (text.includes('benign')) style = styles.success;
         else if (text.includes('uncertain')) style = styles.warning;
+        // Include gray for 'Conflicting classifications of pathogenicity' and others
+        else if (text.includes('conflicting')) style = styles.default;
     } else if (type === 'type') {
         if (text === 'snv') style = styles.info;
         else style = styles.purple;
