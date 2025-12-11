@@ -1,4 +1,4 @@
-# Fiocruz Genomics Portal
+# aPRoVAR - Arquivo Paranaense Online de Variantes Genéticas
 
 A comprehensive platform for exploring and analyzing genomic variants, designed for the Fiocruz research community. This portal integrates a high-performance Elasticsearch backend with a modern React frontend to provide fast and intuitive access to genomic data.
 
@@ -13,8 +13,8 @@ The easiest way to run the entire application (Database, Backend, and Frontend) 
 ### Steps
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/omatheuspimenta/fiocruz-genomics-portal
-   cd fiocruz-genomics-portal
+   git clone https://github.com/omatheuspimenta/aPRoVAR
+   cd aPRoVAR
    ```
 
 2. **Start the services:**
@@ -70,8 +70,8 @@ sudo sysctl -p
 Clone the repository and navigate to the project folder.
 
 ```bash
-git clone https://github.com/omatheuspimenta/fiocruz-genomics-portal
-cd fiocruz-genomics-portal
+git clone https://github.com/omatheuspimenta/aPRoVAR
+cd aPRoVAR
 ```
 
 Create a `.env` file with your production secrets:
