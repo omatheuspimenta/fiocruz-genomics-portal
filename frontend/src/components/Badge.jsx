@@ -14,11 +14,12 @@ const Badge = ({ children, type = 'default' }) => {
     const text = String(children || "").toLowerCase();
 
     if (type === 'clinical') {
-        if (text.includes('pathogenic')) style = styles.danger;
+        // Include gray for 'Conflicting classifications of pathogenicity' and others
+        if (text.includes('conflicting')) style = styles.default;
+        else if (text.includes('pathogenic')) style = styles.danger;
         else if (text.includes('benign')) style = styles.success;
         else if (text.includes('uncertain')) style = styles.warning;
-        // Include gray for 'Conflicting classifications of pathogenicity' and others
-        else if (text.includes('conflicting')) style = styles.default;
+        
     } else if (type === 'type') {
         if (text === 'snv') style = styles.info;
         else style = styles.purple;
